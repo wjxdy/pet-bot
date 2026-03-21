@@ -200,8 +200,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func openSettings() {
         if settingsWindow == nil {
             let settingsView = SettingsView(agentViewModel: viewModel)
-            let hostingController = NSHostingController(rootView: settingsView)
-            
+            let hostingView = NSHostingView(rootView: settingsView)
+            hostingView.frame = NSRect(x: 0, y: 0, width: 450, height: 500)
+
             let window = NSWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 450, height: 500),
                 styleMask: [.titled, .closable, .miniaturizable],
@@ -209,12 +210,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 defer: false
             )
             window.title = "PetBot 设置"
-            window.contentViewController = hostingController
+            window.contentView = hostingView
             window.isReleasedWhenClosed = false
-            
+            window.center()
+
             settingsWindow = window
         }
-        
+
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }

@@ -22,58 +22,74 @@ struct SettingsView: View {
             Divider()
             
             // 内容
-            Form {
-                Section("气泡设置") {
-                    Picker("自动消失时间", selection: $autoHideTime) {
-                        Text("5秒").tag(5.0)
-                        Text("10秒").tag(10.0)
-                        Text("15秒").tag(15.0)
-                        Text("30秒").tag(30.0)
-                        Text("永不").tag(-1.0)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    GroupBox("气泡设置") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("自动消失时间")
+                                    .font(.subheadline)
+                                Picker("", selection: $autoHideTime) {
+                                    Text("5秒").tag(5.0)
+                                    Text("10秒").tag(10.0)
+                                    Text("15秒").tag(15.0)
+                                    Text("30秒").tag(30.0)
+                                    Text("永不").tag(-1.0)
+                                }
+                                .pickerStyle(SegmentedPickerStyle())
+                                .labelsHidden()
+                            }
+
+                            HStack {
+                                Text("X 偏移")
+                                Spacer()
+                                Text("\(Int(offsetX))")
+                                    .frame(width: 30, alignment: .trailing)
+                                Slider(value: $offsetX, in: -100...100, step: 1)
+                                    .frame(width: 150)
+                            }
+
+                            HStack {
+                                Text("Y 偏移")
+                                Spacer()
+                                Text("\(Int(offsetY))")
+                                    .frame(width: 30, alignment: .trailing)
+                                Slider(value: $offsetY, in: -50...100, step: 1)
+                                    .frame(width: 150)
+                            }
+                        }
+                        .padding(.vertical, 4)
                     }
-                    .pickerStyle(SegmentedPickerStyle())
-                    
-                    HStack {
-                        Text("X 偏移")
-                        Spacer()
-                        Text("\(Int(offsetX))")
-                        Slider(value: $offsetX, in: -100...100, step: 1)
-                            .frame(width: 150)
-                    }
-                    
-                    HStack {
-                        Text("Y 偏移")
-                        Spacer()
-                        Text("\(Int(offsetY))")
-                        Slider(value: $offsetY, in: -50...100, step: 1)
-                            .frame(width: 150)
-                    }
-                }
-                
-                Section("Agent 选择") {
-                    if agentViewModel.availableAgents.isEmpty {
-                        Text("加载中...")
-                            .foregroundColor(.gray)
-                    } else {
-                        ForEach(agentViewModel.availableAgents) { agent in
-                            Button(action: {
-                                agentViewModel.switchAgent(agent)
-                            }) {
-                                HStack {
-                                    Text("\(agent.icon) \(agent.name)")
-                                    Spacer()
-                                    if agent.id == agentViewModel.currentAgent.id {
-                                        Image(systemName: "checkmark")
-                                            .foregroundColor(.blue)
+
+                    GroupBox("Agent 选择") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            if agentViewModel.availableAgents.isEmpty {
+                                Text("加载中...")
+                                    .foregroundColor(.gray)
+                            } else {
+                                ForEach(agentViewModel.availableAgents) { agent in
+                                    Button(action: {
+                                        agentViewModel.switchAgent(agent)
+                                    }) {
+                                        HStack {
+                                            Text("\(agent.icon) \(agent.name)")
+                                            Spacer()
+                                            if agent.id == agentViewModel.currentAgent.id {
+                                                Image(systemName: "checkmark")
+                                                    .foregroundColor(.blue)
+                                            }
+                                        }
+                                        .contentShape(Rectangle())
                                     }
+                                    .buttonStyle(PlainButtonStyle())
                                 }
                             }
-                            .buttonStyle(PlainButtonStyle())
                         }
+                        .padding(.vertical, 4)
                     }
                 }
+                .padding()
             }
-            .padding()
             
             Spacer()
             
@@ -82,6 +98,6 @@ struct SettingsView: View {
             }
             .padding()
         }
-        .frame(width: 400, height: 450)
+        .frame(minWidth: 450, minHeight: 500)
     }
 }

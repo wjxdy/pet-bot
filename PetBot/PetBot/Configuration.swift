@@ -25,7 +25,7 @@ enum AppConfiguration {
         getScaledImageSize()
     }
     
-    private static let maxPetHeight: CGFloat = 160
+    private static let maxPetHeight: CGFloat = 140
     
     private static func getScaledImageSize() -> CGSize {
         if let image = NSImage(contentsOfFile: petImagePath) {

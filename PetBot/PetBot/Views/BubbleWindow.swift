@@ -114,12 +114,14 @@ class BubbleWindowController: NSObject {
             // 获取锚定窗口的屏幕坐标
             let anchorFrame = anchor.frame
             
-            // 气泡位置：宠物左上方
-            let x = anchorFrame.origin.x - 120 // 左边一点
-            let y = anchorFrame.origin.y + 190 // 上方
+            // 气泡紧挨着宠物左上角
+            // X: 与宠物左边对齐
+            // Y: 宠物顶部上方一点点
+            let x = anchorFrame.origin.x
+            let y = anchorFrame.origin.y + anchorFrame.height + 5
             
             window.setFrameOrigin(NSPoint(x: x, y: y))
-            print("[PetBot] 气泡位置: (\(x), \(y))")
+            print("[PetBot] 气泡位置: (\(x), \(y)), 宠物: (\(anchorFrame.origin.x), \(anchorFrame.origin.y), \(anchorFrame.width)x\(anchorFrame.height))")
         }
     }
 }

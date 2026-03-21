@@ -8,12 +8,12 @@ import AppKit
 class InputWindowController: NSObject, NSTextFieldDelegate {
     static let shared = InputWindowController()
     
-    private var window: NSPanel?
+    private var window: NSWindow?
     private var textField: NSTextField?
     private var agentManager: AgentManager?
     private var onSendCallback: ((String) -> Void)?
     
-    private let positionKey = "inputWindowPositionV5"
+    private let positionKey = "inputWindowPositionV6"
     
     var isVisible: Bool {
         return window?.isVisible ?? false
@@ -27,31 +27,42 @@ class InputWindowController: NSObject, NSTextFieldDelegate {
             createWindow()
         }
         
-        // 每次显示时更新 placeholder
         updatePlaceholder()
-        
         restorePosition()
         
-        // 关键：激活应用
+        guard let window = window else { return }
+        
+        // 关键：先激活应用
         NSApp.activate(ignoringOtherApps: true)
         
-        // 显示窗口
-        window?.makeKeyAndOrderFront(nil)
+        // 显示窗口并确保它成为 key window
+        window.makeKeyAndOrderFront(nil)
         
-        // 关键：确保窗口成为 key window 后再设置第一响应者
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            guard let self = self, let window = self.window else { return }
-            window.makeKey()
-            if let textField = self.textField {
-                window.makeFirstResponder(textField)
-                textField.becomeFirstResponder()
+        // 强制让窗口成为第一响应者
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, let window = self.window, let textField = self.textField else { return }
+            
+            // 关键步骤：确保窗口是 key window
+            if !window.isKeyWindow {
+                window.makeKey()
             }
+            
+            // 设置第一响应者
+            window.makeFirstResponder(textField)
+            
+            // 额外：确保 text field 是 editable 的
+            textField.isEditable = true
+            textField.isSelectable = true
+            textField.isEnabled = true
+            
+            // 刷新
+            textField.needsDisplay = true
+            textField.window?.update()
         }
     }
     
     func hide() {
         savePosition()
-        window?.resignKey()
         window?.orderOut(nil)
         textField?.stringValue = ""
     }
@@ -76,28 +87,29 @@ class InputWindowController: NSObject, NSTextFieldDelegate {
     }
     
     private func createWindow() {
-        // 创建 NSPanel - 使用 .borderless 而不是 .nonactivatingPanel
-        let panel = NSPanel(
+        // 关键：使用 NSWindow 而不是 NSPanel，确保可以正常接收输入
+        let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 80),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
         )
         
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = true
-        panel.level = .floating
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        panel.isMovableByWindowBackground = true
-        // 关键：设置为 false 让 panel 可以成为 key window
-        panel.becomesKeyOnlyIfNeeded = false
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.hasShadow = true
+        window.level = .floating
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        window.isMovableByWindowBackground = true
+        
+        // 关键：接受鼠标事件
+        window.ignoresMouseEvents = false
         
         // 创建内容视图
         let contentView = createContentView()
-        panel.contentView = contentView
+        window.contentView = contentView
         
-        window = panel
+        self.window = window
     }
     
     private func createContentView() -> NSView {
@@ -125,7 +137,14 @@ class InputWindowController: NSObject, NSTextFieldDelegate {
         inputBg.layer?.cornerRadius = 24
         inputContainer.addSubview(inputBg)
         
-        // 关键：使用 NSTextField 并配置为可编辑
+        // 关键：创建一个可以接收点击的容器视图
+        let clickHandler = ClickableView(frame: NSRect(x: 0, y: 0, width: 320, height: 48))
+        clickHandler.onClick = { [weak self] in
+            self?.focusTextField()
+        }
+        inputBg.addSubview(clickHandler)
+        
+        // 创建 NSTextField
         let textField = NSTextField(frame: NSRect(x: 16, y: 10, width: 288, height: 28))
         textField.delegate = self
         textField.font = NSFont.systemFont(ofSize: 14)
@@ -135,12 +154,11 @@ class InputWindowController: NSObject, NSTextFieldDelegate {
         textField.focusRingType = .none
         textField.usesSingleLineMode = true
         textField.lineBreakMode = .byTruncatingTail
-        // 关键：确保可编辑
         textField.isEditable = true
         textField.isSelectable = true
         textField.isEnabled = true
         
-        // 设置 placeholder
+        // 占位符
         let placeholderAttrs: [NSAttributedString.Key: Any] = [
             .foregroundColor: NSColor.white.withAlphaComponent(0.5),
             .font: NSFont.systemFont(ofSize: 14)
@@ -168,10 +186,16 @@ class InputWindowController: NSObject, NSTextFieldDelegate {
         return container
     }
     
+    private func focusTextField() {
+        guard let window = window, let textField = textField else { return }
+        window.makeKey()
+        window.makeFirstResponder(textField)
+        textField.becomeFirstResponder()
+    }
+    
     // MARK: - NSTextFieldDelegate
     
     func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
-        // 检测回车键
         if commandSelector == #selector(NSResponder.insertNewline(_:)) {
             sendButtonClicked()
             return true
@@ -207,6 +231,15 @@ class InputWindowController: NSObject, NSTextFieldDelegate {
         } else {
             win.setFrameOrigin(NSPoint(x: defaultX, y: defaultY))
         }
+    }
+}
+
+// 可点击视图 - 用于捕获点击事件
+class ClickableView: NSView {
+    var onClick: (() -> Void)?
+    
+    override func mouseDown(with event: NSEvent) {
+        onClick?()
     }
 }
 

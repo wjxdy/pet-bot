@@ -1,10 +1,10 @@
 // InputWindow.swift
-// 输入窗口控制器 - 使用标准窗口确保可输入
+// 输入窗口控制器 - 可拖动带阴影
 
 import SwiftUI
 import AppKit
 
-struct SimpleInputView: View {
+struct DraggableInputView: View {
     @State private var text: String = ""
     let onSend: (String) -> Void
     
@@ -34,9 +34,11 @@ struct SimpleInputView: View {
             .disabled(text.isEmpty)
         }
         .padding(16)
-        .background(Color(NSColor.windowBackgroundColor))
-        .cornerRadius(12)
-        .shadow(radius: 10)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(NSColor.windowBackgroundColor))
+                .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+        )
     }
     
     private func submit() {
@@ -51,7 +53,7 @@ struct SimpleInputView: View {
 class InputWindowController: NSObject, NSWindowDelegate {
     static let shared = InputWindowController()
     
-    private var window: NSWindow?
+    private var window: NSPanel?
     private var onSendCallback: ((String) -> Void)?
     
     var isVisible: Bool {
@@ -64,9 +66,6 @@ class InputWindowController: NSObject, NSWindowDelegate {
         if window == nil {
             createWindow()
         }
-        
-        // 窗口居中
-        window?.center()
         
         // 激活并显示
         NSApp.activate(ignoringOtherApps: true)
@@ -83,29 +82,32 @@ class InputWindowController: NSObject, NSWindowDelegate {
     }
     
     private func createWindow() {
-        let contentView = SimpleInputView { [weak self] text in
+        let contentView = DraggableInputView { [weak self] text in
             self?.onSendCallback?(text)
             self?.hide()
         }
         
         let hostingController = NSHostingController(rootView: contentView)
         
-        let window = NSWindow(
+        // 使用 NSPanel 无边框但可拖动
+        let window = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 80),
-            styleMask: [.titled, .closable],
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
         
-        window.title = "发送消息"
-        window.contentViewController = hostingController
-        window.delegate = self
-        window.isReleasedWhenClosed = false
+        window.contentView = hostingController.view
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.hasShadow = true  // 启用阴影
+        window.level = .floating
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        window.isMovableByWindowBackground = true  // 允许拖动
+        
+        // 居中显示
+        window.center()
         
         self.window = window
-    }
-    
-    func windowWillClose(_ notification: Notification) {
-        // 窗口关闭时的处理
     }
 }

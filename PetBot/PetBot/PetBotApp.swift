@@ -260,7 +260,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         y -= 40
         
-        // X 位置
+        // Pet X 位置
         let petXLabel = NSTextField(labelWithString: "X:")
         petXLabel.sizeToFit()
         petXLabel.frame.origin = CGPoint(x: 40, y: y)
@@ -270,7 +270,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         petXField.stringValue = "\(Int(UserDefaults.standard.double(forKey: "petInitialX")))"
         contentView.addSubview(petXField)
         
-        // Y 位置
+        // Pet Y 位置
         let petYLabel = NSTextField(labelWithString: "Y:")
         petYLabel.sizeToFit()
         petYLabel.frame.origin = CGPoint(x: 170, y: y)
@@ -279,6 +279,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let petYField = NSTextField(frame: NSRect(x: 200, y: y, width: 80, height: 22))
         petYField.stringValue = "\(Int(UserDefaults.standard.double(forKey: "petInitialY")))"
         contentView.addSubview(petYField)
+        
+        y -= 50
+        
+        // 气泡框位置设置
+        let bubblePosLabel = NSTextField(labelWithString: "气泡框位置偏移")
+        bubblePosLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
+        bubblePosLabel.textColor = .secondaryLabelColor
+        bubblePosLabel.sizeToFit()
+        bubblePosLabel.frame.origin = CGPoint(x: 20, y: y)
+        contentView.addSubview(bubblePosLabel)
+        
+        y -= 40
+        
+        // 气泡框 X 偏移
+        let bubbleXLabel = NSTextField(labelWithString: "X 偏移:")
+        bubbleXLabel.sizeToFit()
+        bubbleXLabel.frame.origin = CGPoint(x: 40, y: y)
+        contentView.addSubview(bubbleXLabel)
+        
+        let bubbleXField = NSTextField(frame: NSRect(x: 110, y: y, width: 80, height: 22))
+        bubbleXField.stringValue = "\(Int(UserDefaults.standard.double(forKey: "bubbleOffsetX")))"
+        contentView.addSubview(bubbleXField)
+        
+        // 气泡框 Y 偏移
+        let bubbleYLabel = NSTextField(labelWithString: "Y 偏移:")
+        bubbleYLabel.sizeToFit()
+        bubbleYLabel.frame.origin = CGPoint(x: 210, y: y)
+        contentView.addSubview(bubbleYLabel)
+        
+        let bubbleYField = NSTextField(frame: NSRect(x: 280, y: y, width: 80, height: 22))
+        bubbleYField.stringValue = "\(Int(UserDefaults.standard.double(forKey: "bubbleOffsetY")))"
+        contentView.addSubview(bubbleYField)
         
         y -= 50
         
@@ -362,20 +394,37 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func closeSettingsWindow(_ sender: NSButton) {
         guard let window = sender.window, let contentView = window.contentView else { return }
         
-        // 查找并保存设置
+        // 遍历所有文本框保存设置
         for view in contentView.subviews {
-            if let textField = view as? NSTextField {
-                // 通过位置识别 X 和 Y 字段
-                if textField.frame.origin.x == 70 && textField.frame.width == 80 {
-                    if let x = Double(textField.stringValue) {
-                        UserDefaults.standard.set(x, forKey: "petInitialX")
+            if let textField = view as? NSTextField, let superview = textField.superview {
+                let x = textField.frame.origin.x
+                
+                // Pet X 位置 (x=70, width=80)
+                if x == 70 && textField.frame.width == 80 {
+                    if let val = Double(textField.stringValue) {
+                        UserDefaults.standard.set(val, forKey: "petInitialX")
                     }
-                } else if textField.frame.origin.x == 200 && textField.frame.width == 80 {
-                    if let y = Double(textField.stringValue) {
-                        UserDefaults.standard.set(y, forKey: "petInitialY")
+                }
+                // Pet Y 位置 (x=200, width=80)
+                else if x == 200 && textField.frame.width == 80 {
+                    if let val = Double(textField.stringValue) {
+                        UserDefaults.standard.set(val, forKey: "petInitialY")
                     }
-                } else if textField.frame.origin.x == 160 && textField.frame.width == 250 {
-                    // OpenClaw 路径
+                }
+                // 气泡框 X 偏移 (x=110, width=80)
+                else if x == 110 && textField.frame.width == 80 {
+                    if let val = Double(textField.stringValue) {
+                        UserDefaults.standard.set(val, forKey: "bubbleOffsetX")
+                    }
+                }
+                // 气泡框 Y 偏移 (x=280, width=80)
+                else if x == 280 && textField.frame.width == 80 {
+                    if let val = Double(textField.stringValue) {
+                        UserDefaults.standard.set(val, forKey: "bubbleOffsetY")
+                    }
+                }
+                // OpenClaw 路径 (x=160, width=250)
+                else if x == 160 && textField.frame.width == 250 {
                     AppConfiguration.openclawPath = textField.stringValue
                 }
             }

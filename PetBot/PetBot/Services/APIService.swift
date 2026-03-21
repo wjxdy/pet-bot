@@ -41,23 +41,17 @@ actor OpenClawAPIService: APIServiceProtocol {
     }
     
     private func callOpenClawAgent(message: String, agentId: String) async throws -> String {
-        AppLogger.info("调用 OpenClaw agent: \(agentId), 消息: \(message)")
+        AppLogger.info("调用 OpenClaw agent: \(agentId)")
         
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/local/bin/openclaw")
         
-        // 使用 openclaw agent 命令
         process.arguments = [
             "agent",
             "--agent", agentId,
             "--message", message,
-            "--timeout", "30" // 30秒超时
+            "--timeout", "30"
         ]
-        
-        // 禁用插件日志输出
-        var env = ProcessInfo.processInfo.environment
-        env["OPENCLAW_LOG_LEVEL"] = "error"
-        process.environment = env
         
         let pipe = Pipe()
         let errorPipe = Pipe()
@@ -70,41 +64,61 @@ actor OpenClawAPIService: APIServiceProtocol {
                     let data = pipe.fileHandleForReading.readDataToEndOfFile()
                     let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
                     
-                    var output = String(data: data, encoding: .utf8) ?? ""
+                    let output = String(data: data, encoding: .utf8) ?? ""
                     let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
                     
-                    AppLogger.info("原始输出: \(output.prefix(200))")
-                    AppLogger.info("错误输出: \(errorOutput.prefix(200))")
-                    
-                    // 过滤掉插件日志行
-                    let lines = output.components(separatedBy: .newlines)
-                    let filteredLines = lines.filter { line in
-                        !line.contains("[plugins]") && 
-                        !line.contains("Registered") &&
-                        !line.contains("🦞 OpenClaw") &&
-                        !line.contains("Loading ") &&
-                        !line.isEmpty
-                    }
-                    output = filteredLines.joined(separator: "\n")
+                    // 智能提取响应内容
+                    let response = Self.extractResponse(from: output)
                     
                     if proc.terminationStatus == 0 {
-                        AppLogger.success("Agent 响应成功，长度: \(output.count)")
-                        continuation.resume(returning: output.isEmpty ? "(Agent 已处理，无输出)" : output)
+                        AppLogger.success("Agent 响应成功")
+                        continuation.resume(returning: response.isEmpty ? "(无回复)" : response)
                     } else {
-                        AppLogger.error("Agent 失败，状态码: \(proc.terminationStatus), 错误: \(errorOutput)")
-                        continuation.resume(throwing: APIError.cliError(errorOutput.isEmpty ? "未知错误" : errorOutput))
+                        AppLogger.error("Agent 失败: \(errorOutput)")
+                        continuation.resume(throwing: APIError.cliError(errorOutput))
                     }
                 }
                 
                 do {
                     try process.run()
-                    AppLogger.info("进程已启动")
                 } catch {
-                    AppLogger.error("启动进程失败: \(error)")
                     continuation.resume(throwing: APIError.cliError(error.localizedDescription))
                 }
             }
         }
+    }
+    
+    private static func extractResponse(from output: String) -> String {
+        let lines = output.components(separatedBy: .newlines)
+        var contentLines: [String] = []
+        var foundContent = false
+        
+        for line in lines {
+            // 跳过插件日志行
+            if line.contains("[plugins]") || 
+               line.contains("Registered") ||
+               line.contains("🦞 OpenClaw") ||
+               line.contains("Loading ") {
+                continue
+            }
+            
+            // 如果遇到非空行，开始收集内容
+            if !line.trimmingCharacters(in: .whitespaces).isEmpty {
+                foundContent = true
+            }
+            
+            // 收集所有内容行（包括空行，但不包括开头的空行）
+            if foundContent {
+                contentLines.append(line)
+            }
+        }
+        
+        // 移除末尾的空行
+        while let last = contentLines.last, last.trimmingCharacters(in: .whitespaces).isEmpty {
+            contentLines.removeLast()
+        }
+        
+        return contentLines.joined(separator: "\n")
     }
     
     private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {
@@ -115,7 +129,7 @@ actor OpenClawAPIService: APIServiceProtocol {
             
             group.addTask {
                 try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-                throw APIError.cliError("请求超时 (\(Int(seconds))秒)")
+                throw APIError.cliError("请求超时")
             }
             
             let result = try await group.next()!

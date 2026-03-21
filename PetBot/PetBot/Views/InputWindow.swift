@@ -16,12 +16,12 @@ struct SpotlightInputView: View {
             // 搜索图标
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 20, weight: .medium))
-                .foregroundColor(.white.opacity(0.6))
+                .foregroundColor(.gray)
             
             // 输入框
             TextField("给小米鼠发消息...", text: $text)
                 .font(.system(size: 18))
-                .foregroundColor(.white)
+                .foregroundColor(.black)
                 .focused($isFocused)
                 .textFieldStyle(PlainTextFieldStyle())
                 .onSubmit {
@@ -33,7 +33,7 @@ struct SpotlightInputView: View {
                 Button(action: { text = "" }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 18))
-                        .foregroundColor(.white.opacity(0.5))
+                        .foregroundColor(.gray)
                 }
                 .buttonStyle(PlainButtonStyle())
             }
@@ -42,11 +42,11 @@ struct SpotlightInputView: View {
             Button(action: send) {
                 Image(systemName: "arrow.up")
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.black)
+                    .foregroundColor(.white)
                     .frame(width: 28, height: 28)
                     .background(
                         Circle()
-                            .fill(text.isEmpty ? Color.white.opacity(0.3) : Color.white)
+                            .fill(text.isEmpty ? Color.gray.opacity(0.3) : Color.blue)
                     )
             }
             .buttonStyle(PlainButtonStyle())
@@ -55,6 +55,12 @@ struct SpotlightInputView: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
         .frame(width: 680)
+        .background(Color.white) // 白色背景
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
+        .onAppear {
+            isFocused = true
+        }
     }
     
     private func send() {
@@ -70,7 +76,7 @@ struct SpotlightInputView: View {
 class InputWindowController: NSObject {
     static let shared = InputWindowController()
     
-    private var window: NSPanel?
+    private var window: NSWindow?
     private var hostingController: NSHostingController<SpotlightInputView>?
     private var onSendCallback: ((String) -> Void)?
     
@@ -85,17 +91,11 @@ class InputWindowController: NSObject {
             createWindow()
         }
         
-        // 激活应用并显示窗口
+        // 激活应用
         NSApp.activate(ignoringOtherApps: true)
-        window?.makeKeyAndOrderFront(nil)
         
-        // 延迟一点确保窗口准备好后设置焦点
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            if let hostingView = self?.window?.contentView as? NSHostingView<SpotlightInputView> {
-                // 触发 SwiftUI 焦点
-                self?.window?.makeFirstResponder(hostingView)
-            }
-        }
+        // 显示窗口
+        window?.makeKeyAndOrderFront(nil)
     }
     
     func hide() {
@@ -122,8 +122,8 @@ class InputWindowController: NSObject {
         let hostingController = NSHostingController(rootView: inputView)
         self.hostingController = hostingController
         
-        // 创建 NSPanel - 使用 borderless 但不使用 nonactivatingPanel
-        let window = NSPanel(
+        // 使用 NSWindow 而不是 NSPanel，更容易处理焦点
+        let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 680, height: 60),
             styleMask: [.borderless],
             backing: .buffered,
@@ -133,19 +133,9 @@ class InputWindowController: NSObject {
         window.contentView = hostingController.view
         window.isOpaque = false
         window.backgroundColor = .clear
-        window.hasShadow = true
+        window.hasShadow = false // SwiftUI 处理阴影
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        window.isMovableByWindowBackground = false // Spotlight 风格通常不拖动
-        
-        // 设置圆角和背景
-        window.contentView?.wantsLayer = true
-        window.contentView?.layer?.cornerRadius = 16
-        window.contentView?.layer?.masksToBounds = true
-        window.contentView?.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.75).cgColor
-        
-        // 添加强阴影效果
-        window.hasShadow = true
         
         // 居中显示
         positionWindowCenter(window)
@@ -159,7 +149,7 @@ class InputWindowController: NSObject {
         let screenRect = screen.visibleFrame
         let windowSize = window.frame.size
         
-        // Spotlight 风格：水平居中，垂直偏上（屏幕高度的 2/3 处）
+        // Spotlight 风格：水平居中，垂直偏上
         let x = screenRect.midX - windowSize.width / 2
         let y = screenRect.maxY * 0.65 - windowSize.height / 2
         

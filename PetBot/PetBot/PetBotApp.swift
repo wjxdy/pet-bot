@@ -197,8 +197,111 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Settings
     @objc private func openSettings() {
-        SettingsWindowController.shared.setup(with: viewModel)
-        SettingsWindowController.shared.showSettings()
+        // 直接在这里创建设置窗口，避免模块问题
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 500),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "PetBot 设置"
+        window.center()
+        
+        // 创建内容视图
+        let contentView = NSView(frame: NSRect(x: 0, y: 0, width: 480, height: 500))
+        
+        var y: CGFloat = 450
+        
+        // 标题
+        let title = NSTextField(labelWithString: "PetBot 设置")
+        title.font = NSFont.systemFont(ofSize: 20, weight: .semibold)
+        title.sizeToFit()
+        title.frame.origin = CGPoint(x: 20, y: y)
+        contentView.addSubview(title)
+        
+        y -= 60
+        
+        // 气泡设置
+        let bubbleLabel = NSTextField(labelWithString: "气泡设置")
+        bubbleLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
+        bubbleLabel.textColor = .secondaryLabelColor
+        bubbleLabel.sizeToFit()
+        bubbleLabel.frame.origin = CGPoint(x: 20, y: y)
+        contentView.addSubview(bubbleLabel)
+        
+        y -= 40
+        
+        // 自动消失时间
+        let timeLabel = NSTextField(labelWithString: "自动消失时间:")
+        timeLabel.sizeToFit()
+        timeLabel.frame.origin = CGPoint(x: 40, y: y)
+        contentView.addSubview(timeLabel)
+        
+        let timePopUp = NSPopUpButton(frame: NSRect(x: 160, y: y, width: 150, height: 25))
+        timePopUp.addItems(withTitles: ["5秒", "10秒", "15秒", "30秒", "永不"])
+        let currentTime = UserDefaults.standard.double(forKey: "bubbleAutoHideSeconds")
+        let times: [Double] = [5, 10, 15, 30, -1]
+        if let index = times.firstIndex(of: currentTime) {
+            timePopUp.selectItem(at: index)
+        } else {
+            timePopUp.selectItem(at: 1)
+        }
+        contentView.addSubview(timePopUp)
+        
+        y -= 50
+        
+        // Agent 选择
+        let agentLabel = NSTextField(labelWithString: "Agent 选择")
+        agentLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
+        agentLabel.textColor = .secondaryLabelColor
+        agentLabel.sizeToFit()
+        agentLabel.frame.origin = CGPoint(x: 20, y: y)
+        contentView.addSubview(agentLabel)
+        
+        y -= 40
+        
+        // Agent 单选按钮
+        for (index, agent) in viewModel.availableAgents.enumerated() {
+            let button = NSButton(frame: NSRect(x: 40, y: y, width: 400, height: 24))
+            button.title = "\(agent.icon) \(agent.name)"
+            button.setButtonType(.radio)
+            button.state = agent.id == viewModel.currentAgent.id ? .on : .off
+            button.tag = index
+            button.target = self
+            button.action = #selector(settingsAgentSelected(_:))
+            contentView.addSubview(button)
+            y -= 30
+        }
+        
+        // 完成按钮
+        let doneButton = NSButton(frame: NSRect(x: 380, y: 20, width: 80, height: 28))
+        doneButton.title = "完成"
+        doneButton.bezelStyle = .rounded
+        doneButton.keyEquivalent = "\r"
+        doneButton.target = self
+        doneButton.action = #selector(closeSettingsWindow(_:))
+        // 存储窗口引用
+        doneButton.tag = Int(bitPattern: Unmanaged.passUnretained(window).toOpaque())
+        contentView.addSubview(doneButton)
+        
+        window.contentView = contentView
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        
+        // 临时存储窗口
+        objc_setAssociatedObject(self, "settingsWindow", window, .OBJC_ASSOCIATION_RETAIN)
+    }
+    
+    @objc private func settingsAgentSelected(_ sender: NSButton) {
+        let agents = viewModel.availableAgents
+        guard sender.tag >= 0 && sender.tag < agents.count else { return }
+        viewModel.switchAgent(agents[sender.tag])
+    }
+    
+    @objc private func closeSettingsWindow(_ sender: NSButton) {
+        if let window = objc_getAssociatedObject(self, "settingsWindow") as? NSWindow {
+            window.close()
+        }
     }
     
     // MARK: - Quit

@@ -205,6 +205,7 @@ class BubbleWindowController: NSObject {
         
         let anchor = anchorWindow ?? anchorWindowRef
         guard let anchorFrame = anchor?.frame else {
+            // 没有锚点窗口，居中显示
             if let screen = NSScreen.main {
                 let screenFrame = screen.visibleFrame
                 let windowHeight = window.frame.height
@@ -218,38 +219,34 @@ class BubbleWindowController: NSObject {
         let bubbleWidth: CGFloat = 280
         let bubbleHeight = window.frame.height
         
-        // 计算气泡位置：居中于锚点窗口，使用配置的偏移
+        // 计算气泡位置：居中于锚点窗口上方
         var x = anchorFrame.midX - (bubbleWidth / 2) + offsetX
-        var y = anchorFrame.maxY + offsetY
+        var y = anchorFrame.maxY + 10 + offsetY  // +10 是基础间距
         
-        // 获取锚点窗口所在的屏幕进行边界检测
-        let targetScreen = anchor?.screen ?? NSScreen.main
-        if let screenFrame = targetScreen?.visibleFrame {
-            // 确保气泡不超出屏幕右边界
+        // 屏幕边界检测
+        if let screen = NSScreen.main {
+            let screenFrame = screen.visibleFrame
+            
+            // 右边界
             if x + bubbleWidth > screenFrame.maxX {
                 x = screenFrame.maxX - bubbleWidth - 10
             }
-            // 确保气泡不超出屏幕左边界
+            // 左边界
             if x < screenFrame.minX {
                 x = screenFrame.minX + 10
             }
-            // 如果气泡超出屏幕上边界，显示在锚点窗口下方
+            // 上边界 - 如果超出，显示在锚点下方
             if y + bubbleHeight > screenFrame.maxY {
-                y = anchorFrame.minY - bubbleHeight - offsetY
+                y = anchorFrame.minY - bubbleHeight - 10 - offsetY
+            }
+            // 下边界
+            if y < screenFrame.minY {
+                y = screenFrame.minY + 10
             }
         }
         
-        // 使用动画移动到新位置
-        let newOrigin = NSPoint(x: x, y: y)
-        if window.isVisible {
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.2
-                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                window.animator().setFrameOrigin(newOrigin)
-            }
-        } else {
-            window.setFrameOrigin(newOrigin)
-        }
+        // 设置位置
+        window.setFrameOrigin(NSPoint(x: x, y: y))
     }
 }
 

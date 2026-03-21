@@ -86,6 +86,8 @@ class BubbleWindowController: NSObject {
         }
     }
     
+    private var scrollView: NSScrollView?
+    
     private func createWindow() {
         let window = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 280, height: 120),
@@ -104,26 +106,38 @@ class BubbleWindowController: NSObject {
         // 创建像素风格背景
         let pixelView = PixelBubbleView(frame: NSRect(x: 0, y: 0, width: 280, height: 120))
         
+        // 创建滚动视图
+        let scrollView = NSScrollView(frame: NSRect(x: 16, y: 16, width: 248, height: 88))
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.borderType = .noBorder
+        scrollView.backgroundColor = .clear
+        scrollView.drawsBackground = false
+        scrollView.autoresizingMask = [.width, .height]
+        
         // 创建文本视图
-        let textView = NSTextView(frame: NSRect(x: 16, y: 16, width: 248, height: 88))
+        let textView = NSTextView(frame: NSRect(x: 0, y: 0, width: 248, height: 88))
         textView.isEditable = false
         textView.isSelectable = true
         textView.backgroundColor = .clear
         textView.textColor = .black
         textView.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .medium)
-        textView.autoresizingMask = [.width, .height]
         textView.textContainer?.lineFragmentPadding = 0
-        textView.textContainerInset = NSSize(width: 0, height: 0)
+        textView.textContainerInset = NSSize(width: 4, height: 4)
+        textView.autoresizingMask = [.width]
         
-        pixelView.addSubview(textView)
+        scrollView.documentView = textView
+        pixelView.addSubview(scrollView)
         window.contentView = pixelView
         
         self.window = window
+        self.scrollView = scrollView
         self.textView = textView
     }
     
     private func adjustWindowSize(for text: String) {
-        guard let window = window, let textView = textView else { return }
+        guard let window = window, let textView = textView, let scrollView = scrollView else { return }
         
         // 计算文本高度
         let maxWidth: CGFloat = 248
@@ -136,30 +150,52 @@ class BubbleWindowController: NSObject {
             options: [.usesLineFragmentOrigin, .usesFontLeading]
         )
         
-        // 计算所需高度
+        // 计算所需高度（包含内边距）
         let minHeight: CGFloat = 80
         let maxHeight: CGFloat = 400
-        let contentHeight = max(minHeight, min(maxHeight, textRect.height + 50))
+        let contentPadding: CGFloat = 32 // 上下内边距各 16
+        let desiredContentHeight = textRect.height + 20 // 额外间距
         
-        // 获取当前窗口位置
+        // 确定最终窗口高度（限制在 min ~ max 之间）
+        let windowHeight = max(minHeight, min(maxHeight, desiredContentHeight + contentPadding))
+        let contentHeight = windowHeight - contentPadding
+        
+        // 获取当前窗口位置（在调整前记录底部位置）
         let currentFrame = window.frame
+        let bottomY = currentFrame.origin.y + currentFrame.height
         
-        // 更新窗口大小（保持底部位置不变，向上扩展）
+        // 计算新位置（保持底部不变，向上扩展）
         let newFrame = NSRect(
             x: currentFrame.origin.x,
-            y: currentFrame.origin.y + currentFrame.height - contentHeight,
+            y: bottomY - windowHeight,
             width: 280,
-            height: contentHeight
+            height: windowHeight
         )
         
-        window.setFrame(newFrame, display: true, animate: true)
+        // 动画设置新窗口大小
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.2
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            window.animator().setFrame(newFrame, display: true)
+        }
         
-        // 更新文本视图大小
-        textView.frame = NSRect(x: 16, y: 16, width: 248, height: contentHeight - 32)
+        // 更新滚动视图大小
+        scrollView.frame = NSRect(x: 16, y: 16, width: 248, height: contentHeight)
+        
+        // 更新文本视图大小（允许内容超出以便滚动）
+        let textHeight = max(desiredContentHeight, contentHeight)
+        textView.frame = NSRect(x: 0, y: 0, width: 248, height: textHeight)
+        
+        // 滚动到底部（显示最新内容）
+        if textHeight > contentHeight {
+            let scrollPoint = NSPoint(x: 0, y: textHeight - contentHeight)
+            scrollView.contentView.scroll(to: scrollPoint)
+            scrollView.reflectScrolledClipView(scrollView.contentView)
+        }
         
         // 更新背景视图
         if let pixelView = window.contentView as? PixelBubbleView {
-            pixelView.frame = NSRect(x: 0, y: 0, width: 280, height: contentHeight)
+            pixelView.frame = NSRect(x: 0, y: 0, width: 280, height: windowHeight)
             pixelView.needsDisplay = true
         }
     }
@@ -171,7 +207,8 @@ class BubbleWindowController: NSObject {
         guard let anchorFrame = anchor?.frame else {
             if let screen = NSScreen.main {
                 let screenFrame = screen.visibleFrame
-                window.setFrameOrigin(NSPoint(x: screenFrame.midX - 140, y: screenFrame.midY - 60))
+                let windowHeight = window.frame.height
+                window.setFrameOrigin(NSPoint(x: screenFrame.midX - 140, y: screenFrame.midY - windowHeight / 2))
             }
             return
         }
@@ -197,7 +234,17 @@ class BubbleWindowController: NSObject {
             }
         }
         
-        window.setFrameOrigin(NSPoint(x: x, y: y))
+        // 使用动画移动到新位置
+        let newOrigin = NSPoint(x: x, y: y)
+        if window.isVisible {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.2
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                window.animator().setFrameOrigin(newOrigin)
+            }
+        } else {
+            window.setFrameOrigin(newOrigin)
+        }
     }
 }
 

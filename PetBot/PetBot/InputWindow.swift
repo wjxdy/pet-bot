@@ -1,5 +1,5 @@
 // InputWindow.swift
-// 输入框窗口控制器 - 使用 SwiftUI TextField 嵌入 AppKit
+// 简化版 - 使用标准窗口样式测试输入
 
 import SwiftUI
 import AppKit
@@ -8,46 +8,44 @@ import AppKit
 struct InputView: View {
     @State private var text = ""
     var onSend: (String) -> Void
-    var onDismiss: () -> Void
     var agentName: String
     
     var body: some View {
-        HStack(spacing: 12) {
-            // 输入框
-            TextField("给 \(agentName) 发送消息...", text: $text)
-                .font(.system(size: 14))
-                .foregroundColor(.white)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(
-                    Capsule()
-                        .fill(Color.white.opacity(0.6))
-                )
-                .onSubmit {
-                    send()
-                }
-            
-            // 发送按钮
-            Button(action: send) {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 40, height: 40)
-                    .background(
-                        Circle()
-                            .fill(Color.white.opacity(0.5))
-                    )
+        VStack(spacing: 0) {
+            // 标题栏
+            HStack {
+                Text(agentName)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.primary)
+                Spacer()
             }
-            .buttonStyle(PlainButtonStyle())
-            .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color.gray.opacity(0.1))
+            
+            Divider()
+            
+            // 输入区域
+            HStack(spacing: 8) {
+                TextField("输入消息...", text: $text)
+                    .font(.system(size: 14))
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .padding(8)
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(6)
+                    .onSubmit {
+                        send()
+                    }
+                
+                Button(action: send) {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 14, weight: .bold))
+                }
+                .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            .padding(12)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color.white.opacity(0.40))
-                .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 8)
-        )
+        .frame(width: 300)
     }
     
     private func send() {
@@ -67,7 +65,7 @@ class InputWindowController: NSObject {
     private var agentManager: AgentManager?
     private var onSendCallback: ((String) -> Void)?
     
-    private let positionKey = "inputWindowPositionV7"
+    private let positionKey = "inputWindowPositionV8"
     
     var isVisible: Bool {
         return window?.isVisible ?? false
@@ -79,16 +77,15 @@ class InputWindowController: NSObject {
         
         if window == nil {
             createWindow()
+        } else {
+            updateHostingController()
         }
-        
-        // 更新 hosting controller 中的 agentName
-        updateHostingController()
         
         restorePosition()
         
         guard let window = window else { return }
         
-        // 激活应用并显示窗口
+        // 激活并显示
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
     }
@@ -112,9 +109,6 @@ class InputWindowController: NSObject {
                 self?.onSendCallback?(text)
                 self?.hide()
             },
-            onDismiss: { [weak self] in
-                self?.hide()
-            },
             agentName: agentManager?.currentAgent.name ?? "Agent"
         )
         
@@ -122,39 +116,31 @@ class InputWindowController: NSObject {
         let hostingController = NSHostingController(rootView: inputView)
         self.hostingController = hostingController
         
-        // 创建窗口
+        // 创建窗口 - 使用标准窗口样式（带标题栏）
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 80),
-            styleMask: [.borderless],
+            contentRect: NSRect(x: 0, y: 0, width: 300, height: 100),
+            styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
         
-        window.isOpaque = false
-        window.backgroundColor = .clear
-        window.hasShadow = true
+        window.title = "PetBot 输入"
         window.level = .floating
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        window.isMovableByWindowBackground = true
+        window.collectionBehavior = [.canJoinAllSpaces]
         window.contentViewController = hostingController
+        window.isReleasedWhenClosed = false
         
         self.window = window
     }
     
     private func updateHostingController() {
-        guard let onSend = onSendCallback else { return }
-        
         let inputView = InputView(
             onSend: { [weak self] text in
                 self?.onSendCallback?(text)
                 self?.hide()
             },
-            onDismiss: { [weak self] in
-                self?.hide()
-            },
             agentName: agentManager?.currentAgent.name ?? "Agent"
         )
-        
         hostingController?.rootView = inputView
     }
     
@@ -168,8 +154,8 @@ class InputWindowController: NSObject {
         guard let win = window else { return }
         
         let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        let defaultX = screen.midX - 200
-        let defaultY = screen.midY - 40
+        let defaultX = screen.midX - 150
+        let defaultY = screen.midY - 50
         
         if let pos = UserDefaults.standard.dictionary(forKey: positionKey) as? [String: Double],
            let x = pos["x"], let y = pos["y"] {

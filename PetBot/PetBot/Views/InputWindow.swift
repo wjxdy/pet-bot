@@ -29,31 +29,21 @@ class InputWindowController: NSObject, NSWindowDelegate {
         
         guard let window = window, let textField = textField else { return }
         
-        // 关键：先激活应用
+        // 激活应用并显示窗口
         NSApp.activate(ignoringOtherApps: true)
-        
-        // 显示窗口并使其成为 key window
         window.makeKeyAndOrderFront(nil)
         
-        // 清除并准备输入框
+        // 清除输入框
         textField.stringValue = ""
         
-        // 关键：多次尝试设置焦点，确保成功
-        // 立即尝试一次
-        attemptFocus()
+        // 多阶段焦点设置
+        setFocusToTextField(immediate: true)
         
-        // 延迟再尝试几次，确保窗口真正成为 key window 后设置焦点
-        let workItem = DispatchWorkItem { [weak self] in
-            self?.attemptFocus()
+        // 延迟再次尝试
+        focusWorkItem = DispatchWorkItem { [weak self] in
+            self?.setFocusToTextField(immediate: false)
         }
-        focusWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: workItem)
-        
-        // 最后再尝试一次，处理边缘情况
-        let finalWorkItem = DispatchWorkItem { [weak self] in
-            self?.attemptFocus()
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: finalWorkItem)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: focusWorkItem!)
     }
     
     func hide() {
@@ -68,58 +58,71 @@ class InputWindowController: NSObject, NSWindowDelegate {
         textField = nil
     }
     
-    private func attemptFocus() {
+    private func setFocusToTextField(immediate: Bool) {
         guard let window = window, let textField = textField else { return }
+        
+        print("[PetBot] 设置焦点 (immediate: \(immediate))")
         
         // 确保窗口是 key window
         if !window.isKeyWindow {
             window.makeKeyAndOrderFront(nil)
         }
         
-        // 尝试设置第一响应者
-        window.makeFirstResponder(textField)
-        
-        // 额外：如果文本框支持，尝试开始编辑
-        if textField.acceptsFirstResponder {
-            textField.becomeFirstResponder()
+        // 使用 performSelector 延迟调用，确保在下一个 run loop
+        if immediate {
+            textField.perform(#selector(NSView.becomeFirstResponder), with: nil, afterDelay: 0)
+        } else {
+            // 强制设置第一响应者
+            window.makeFirstResponder(textField)
+            
+            // 如果还没成为第一响应者，再次尝试
+            if window.firstResponder !== textField {
+                DispatchQueue.main.async {
+                    textField.becomeFirstResponder()
+                }
+            }
         }
     }
     
     private func createWindow() {
+        // 使用 titled 窗口以确保键盘事件正常，但隐藏标题栏
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 70),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        
+        // 隐藏标题栏但保留标题功能（用于接收键盘事件）
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.standardWindowButton(.closeButton)?.isHidden = true
+        window.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        window.standardWindowButton(.zoomButton)?.isHidden = true
+        
         // 创建视觉特效背景
         let visualEffectView = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 420, height: 70))
-        visualEffectView.material = .hudWindow  // HUD 材质，深色玻璃效果
+        visualEffectView.material = .hudWindow
         visualEffectView.blendingMode = .behindWindow
         visualEffectView.state = .active
         visualEffectView.wantsLayer = true
         visualEffectView.layer?.cornerRadius = cornerRadius
         visualEffectView.layer?.masksToBounds = true
         
-        // 创建文本框 - 无边框样式
+        // 创建文本框
         let textField = FocusAwareTextField()
         textField.placeholderString = "输入消息..."
         textField.font = NSFont.systemFont(ofSize: 15, weight: .medium)
         textField.isEditable = true
         textField.isSelectable = true
+        textField.isEnabled = true
         textField.bezelStyle = .roundedBezel
-        textField.focusRingType = .none  // 无边框聚焦环
+        textField.focusRingType = .default
         textField.backgroundColor = NSColor.white.withAlphaComponent(0.15)
         textField.textColor = .white
-        textField.placeholderAttributedString = NSAttributedString(
-            string: "输入消息...",
-            attributes: [
-                .foregroundColor: NSColor.white.withAlphaComponent(0.5),
-                .font: NSFont.systemFont(ofSize: 15)
-            ]
-        )
         textField.translatesAutoresizingMaskIntoConstraints = false
         textField.target = self
         textField.action = #selector(sendMessage)
-        
-        // 圆角文本框
-        textField.wantsLayer = true
-        textField.layer?.cornerRadius = 8
-        textField.layer?.masksToBounds = true
         
         // 创建发送按钮
         let button = NSButton(title: "发送", target: self, action: #selector(sendMessage))
@@ -149,14 +152,6 @@ class InputWindowController: NSObject, NSWindowDelegate {
             button.heightAnchor.constraint(equalToConstant: 36)
         ])
         
-        // 创建无边框窗口（使用 HUD 面板样式，可以接收键盘事件）
-        let window = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 70),
-            styleMask: [.borderless, .closable],
-            backing: .buffered,
-            defer: false
-        )
-        
         window.contentView = visualEffectView
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -165,7 +160,6 @@ class InputWindowController: NSObject, NSWindowDelegate {
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = true
-        
         window.center()
         
         self.window = window
@@ -175,7 +169,6 @@ class InputWindowController: NSObject, NSWindowDelegate {
     @objc private func sendMessage() {
         guard let text = textField?.stringValue.trimmingCharacters(in: .whitespacesAndNewlines),
               !text.isEmpty else {
-            // 如果没有内容，隐藏窗口
             hide()
             return
         }
@@ -187,13 +180,8 @@ class InputWindowController: NSObject, NSWindowDelegate {
     // MARK: - NSWindowDelegate
     
     func windowDidBecomeKey(_ notification: Notification) {
-        // 窗口成为 key window 时自动设置焦点
-        attemptFocus()
-    }
-    
-    func windowDidBecomeMain(_ notification: Notification) {
-        // 窗口成为 main window 时设置焦点
-        attemptFocus()
+        print("[PetBot] 窗口成为 key window")
+        setFocusToTextField(immediate: false)
     }
     
     func windowWillClose(_ notification: Notification) {
@@ -203,7 +191,6 @@ class InputWindowController: NSObject, NSWindowDelegate {
 
 // MARK: - FocusAwareTextField
 
-/// 自定义文本框，更好地处理焦点事件
 @MainActor
 class FocusAwareTextField: NSTextField {
     
@@ -212,25 +199,20 @@ class FocusAwareTextField: NSTextField {
     }
     
     override func becomeFirstResponder() -> Bool {
+        print("[PetBot] textField becomeFirstResponder")
         let success = super.becomeFirstResponder()
         if success {
-            // 成为第一响应者时选中所有文本（方便替换）
-            DispatchQueue.main.async {
-                if let editor = self.currentEditor() as? NSTextView {
-                    editor.selectAll(nil)
-                }
+            // 选中所有文本
+            if let editor = self.currentEditor() as? NSTextView {
+                editor.selectAll(nil)
             }
         }
         return success
     }
     
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        // 当视图移动到窗口时，如果窗口已经是 key window，尝试获得焦点
-        if window?.isKeyWindow == true {
-            DispatchQueue.main.async {
-                self.window?.makeFirstResponder(self)
-            }
-        }
+    override func mouseDown(with event: NSEvent) {
+        // 点击时确保获得焦点
+        window?.makeFirstResponder(self)
+        super.mouseDown(with: event)
     }
 }

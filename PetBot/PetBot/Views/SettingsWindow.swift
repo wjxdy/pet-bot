@@ -17,7 +17,7 @@ class SettingsWindowController: NSWindowController {
         
         // 计算内容高度（根据 agent 数量）
         let agentCount = viewModel.availableAgents.count
-        let contentHeight: CGFloat = 520 + CGFloat(agentCount * 35)
+        let contentHeight: CGFloat = 620 + CGFloat(agentCount * 35)  // 增加基础高度
         let windowHeight: CGFloat = min(600, contentHeight)
         
         let window = NSWindow(

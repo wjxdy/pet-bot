@@ -5,16 +5,15 @@ import SwiftUI
 import AppKit
 
 @MainActor
-class InputWindowController: NSObject {
+class InputWindowController: NSObject, NSTextFieldDelegate {
     static let shared = InputWindowController()
     
     private var window: NSPanel?
-    private var textView: NSTextView?
-    private var placeholderLabel: NSTextField?
+    private var textField: NSTextField?
     private var agentManager: AgentManager?
     private var onSendCallback: ((String) -> Void)?
     
-    private let positionKey = "inputWindowPositionV4"
+    private let positionKey = "inputWindowPositionV5"
     
     var isVisible: Bool {
         return window?.isVisible ?? false
@@ -28,38 +27,56 @@ class InputWindowController: NSObject {
             createWindow()
         }
         
+        // 每次显示时更新 placeholder
+        updatePlaceholder()
+        
         restorePosition()
+        
+        // 关键：激活应用
+        NSApp.activate(ignoringOtherApps: true)
         
         // 显示窗口
         window?.makeKeyAndOrderFront(nil)
         
-        // 激活应用，确保输入有效
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeKey()
-        
-        // 延迟一点再设置第一响应者，确保窗口已准备好
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            self?.textView?.window?.makeFirstResponder(self?.textView)
+        // 关键：确保窗口成为 key window 后再设置第一响应者
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            guard let self = self, let window = self.window else { return }
+            window.makeKey()
+            if let textField = self.textField {
+                window.makeFirstResponder(textField)
+                textField.becomeFirstResponder()
+            }
         }
     }
     
     func hide() {
         savePosition()
+        window?.resignKey()
         window?.orderOut(nil)
-        textView?.string = ""
-        placeholderLabel?.isHidden = false
+        textField?.stringValue = ""
     }
     
     func close() {
         savePosition()
         window?.close()
         window = nil
-        textView = nil
-        placeholderLabel = nil
+        textField = nil
+    }
+    
+    private func updatePlaceholder() {
+        guard let textField = textField else { return }
+        let placeholderAttrs: [NSAttributedString.Key: Any] = [
+            .foregroundColor: NSColor.white.withAlphaComponent(0.5),
+            .font: NSFont.systemFont(ofSize: 14)
+        ]
+        textField.placeholderAttributedString = NSAttributedString(
+            string: "给 \(agentManager?.currentAgent.name ?? "Agent") 发送消息...",
+            attributes: placeholderAttrs
+        )
     }
     
     private func createWindow() {
-        // 创建 NSPanel
+        // 创建 NSPanel - 使用 .borderless 而不是 .nonactivatingPanel
         let panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 80),
             styleMask: [.borderless],
@@ -73,6 +90,7 @@ class InputWindowController: NSObject {
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isMovableByWindowBackground = true
+        // 关键：设置为 false 让 panel 可以成为 key window
         panel.becomesKeyOnlyIfNeeded = false
         
         // 创建内容视图
@@ -85,7 +103,7 @@ class InputWindowController: NSObject {
     private func createContentView() -> NSView {
         let container = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 80))
         
-        // 背景 - 增加不透明度到 40%
+        // 背景 - 40% 不透明
         let background = NSView(frame: container.bounds)
         background.wantsLayer = true
         background.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.40).cgColor
@@ -100,46 +118,40 @@ class InputWindowController: NSObject {
         let inputContainer = NSView(frame: NSRect(x: 16, y: 16, width: 368, height: 48))
         background.addSubview(inputContainer)
         
-        // 输入框背景 - 增加不透明度到 60%
+        // 输入框背景 - 60% 不透明
         let inputBg = NSView(frame: NSRect(x: 0, y: 0, width: 320, height: 48))
         inputBg.wantsLayer = true
         inputBg.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.60).cgColor
         inputBg.layer?.cornerRadius = 24
         inputContainer.addSubview(inputBg)
         
-        // 使用 NSScrollView + NSTextView 确保可编辑
-        let scrollView = NSScrollView(frame: NSRect(x: 16, y: 10, width: 288, height: 28))
-        scrollView.hasVerticalScroller = false
-        scrollView.hasHorizontalScroller = false
-        scrollView.autohidesScrollers = true
-        scrollView.borderType = .noBorder
-        scrollView.backgroundColor = .clear
+        // 关键：使用 NSTextField 并配置为可编辑
+        let textField = NSTextField(frame: NSRect(x: 16, y: 10, width: 288, height: 28))
+        textField.delegate = self
+        textField.font = NSFont.systemFont(ofSize: 14)
+        textField.textColor = .white
+        textField.backgroundColor = .clear
+        textField.isBordered = false
+        textField.focusRingType = .none
+        textField.usesSingleLineMode = true
+        textField.lineBreakMode = .byTruncatingTail
+        // 关键：确保可编辑
+        textField.isEditable = true
+        textField.isSelectable = true
+        textField.isEnabled = true
         
-        let textView = NSTextView(frame: NSRect(x: 0, y: 0, width: 288, height: 28))
-        textView.isEditable = true
-        textView.isSelectable = true
-        textView.isRichText = false
-        textView.font = NSFont.systemFont(ofSize: 14)
-        textView.textColor = .white
-        textView.backgroundColor = .clear
-        textView.insertionPointColor = .white
-        textView.focusRingType = .none
-        textView.delegate = self
+        // 设置 placeholder
+        let placeholderAttrs: [NSAttributedString.Key: Any] = [
+            .foregroundColor: NSColor.white.withAlphaComponent(0.5),
+            .font: NSFont.systemFont(ofSize: 14)
+        ]
+        textField.placeholderAttributedString = NSAttributedString(
+            string: "发送消息...",
+            attributes: placeholderAttrs
+        )
         
-        scrollView.documentView = textView
-        inputBg.addSubview(scrollView)
-        self.textView = textView
-        
-        // Placeholder 标签
-        let placeholder = NSTextField(labelWithString: "给 Agent 发送消息...")
-        placeholder.frame = NSRect(x: 20, y: 14, width: 280, height: 20)
-        placeholder.font = NSFont.systemFont(ofSize: 14)
-        placeholder.textColor = NSColor.white.withAlphaComponent(0.6)
-        placeholder.backgroundColor = .clear
-        placeholder.isBordered = false
-        placeholder.isSelectable = false
-        inputBg.addSubview(placeholder)
-        self.placeholderLabel = placeholder
+        inputBg.addSubview(textField)
+        self.textField = textField
         
         // 发送按钮
         let sendButton = NSButton(frame: NSRect(x: 332, y: 6, width: 36, height: 36))
@@ -156,12 +168,23 @@ class InputWindowController: NSObject {
         return container
     }
     
+    // MARK: - NSTextFieldDelegate
+    
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        // 检测回车键
+        if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+            sendButtonClicked()
+            return true
+        }
+        return false
+    }
+    
     @objc private func sendButtonClicked() {
-        let text = textView?.string.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard let textField = textField else { return }
+        let text = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         onSendCallback?(text)
-        textView?.string = ""
-        placeholderLabel?.isHidden = false
+        textField.stringValue = ""
         hide()
     }
     
@@ -184,29 +207,6 @@ class InputWindowController: NSObject {
         } else {
             win.setFrameOrigin(NSPoint(x: defaultX, y: defaultY))
         }
-    }
-}
-
-// MARK: - NSTextViewDelegate
-extension InputWindowController: NSTextViewDelegate {
-    func textDidChange(_ notification: Notification) {
-        guard let textView = notification.object as? NSTextView else { return }
-        placeholderLabel?.isHidden = !textView.string.isEmpty
-    }
-    
-    func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
-        // 检测回车键
-        if commandSelector == #selector(NSResponder.insertNewline(_:)) {
-            let text = textView.string.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !text.isEmpty {
-                onSendCallback?(text)
-                textView.string = ""
-                placeholderLabel?.isHidden = false
-                hide()
-            }
-            return true
-        }
-        return false
     }
 }
 

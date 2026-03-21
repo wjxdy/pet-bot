@@ -27,8 +27,8 @@ class PetWindow: NSWindow {
         let screenRect = screen.visibleFrame
         let windowSize = frame.size
         let origin = CGPoint(
-            x: screenRect.maxX - windowSize.width - 20,
-            y: 20
+            x: screenRect.maxX - windowSize.width,
+            y: 40
         )
         
         setFrameOrigin(origin)

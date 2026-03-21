@@ -115,8 +115,8 @@ class BubbleWindowController: NSObject {
             let anchorFrame = anchor.frame
             
             // 气泡位置：宠物左上方
-            let x = anchorFrame.origin.x - 50 // 左边一点
-            let y = anchorFrame.origin.y + anchorFrame.height + 10 // 上方
+            let x = anchorFrame.origin.x - 120 // 左边一点
+            let y = anchorFrame.origin.y + 190 // 上方
             
             window.setFrameOrigin(NSPoint(x: x, y: y))
             print("[PetBot] 气泡位置: (\(x), \(y))")

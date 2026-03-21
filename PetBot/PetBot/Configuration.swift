@@ -16,9 +16,10 @@ enum AppConfiguration {
     static let defaultAgentId = "search" // 小米鼠
     
     // MARK: - UI Configuration
-    static let petWindowSize = CGSize(width: 360, height: 400)
+    // 窗口大小与图片一致 (200 x 260)
+    static let petWindowSize = CGSize(width: 200, height: 290)
     static let inputWindowSize = CGSize(width: 300, height: 100)
-    static let bubbleMaxWidth: CGFloat = 200  // 减小宽度避免截断
+    static let bubbleMaxWidth: CGFloat = 200
     
     // MARK: - Assets
     static let petImagePath = "/Users/xulei/Desktop/new_a.png"

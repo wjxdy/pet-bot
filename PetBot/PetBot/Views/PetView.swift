@@ -29,11 +29,10 @@ struct PetView: View {
     
     // MARK: - Subviews
     private var petContent: some View {
-        VStack(spacing: 8) {
-            Spacer()
-            
+        VStack(spacing: 4) {
+            // 图片填满窗口（减去名字标签空间）
             PetImageView(imagePath: AppConfiguration.petImagePath)
-                .frame(width: 130, height: 130)
+                .frame(width: 200, height: 260)
             
             AgentNameLabel(name: viewModel.currentAgent.name)
         }
@@ -104,11 +103,9 @@ struct AgentNameLabel: View {
     
     var body: some View {
         Text(name)
-            .font(.system(size: 14, weight: .semibold))
+            .font(.system(size: 12, weight: .semibold))
             .foregroundColor(.white)
             .shadow(color: .black.opacity(0.8), radius: 2, x: 0, y: 1)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 2)
-            .padding(.bottom, 20)
+            .padding(.horizontal, 4)
     }
 }

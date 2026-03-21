@@ -197,9 +197,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Settings
     @objc private func openSettings() {
-        let controller = SettingsWindowController()
-        controller.setup(with: viewModel)
-        controller.showSettings()
+        // 使用静态共享实例避免被释放
+        if SettingsWindowController.shared == nil {
+            let controller = SettingsWindowController()
+            controller.setup(with: viewModel)
+            controller.showSettings()
+        } else {
+            SettingsWindowController.shared?.showWindow(nil)
+        }
     }
     
     // MARK: - Quit

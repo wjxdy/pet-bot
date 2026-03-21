@@ -46,20 +46,18 @@ extension Agent {
                 // 排除隐藏目录和非目录项
                 guard !agentId.hasPrefix(".") else { continue }
                 
-                // 尝试读取 config.yaml
+                // 只读取有 config.yaml 的 agent
                 if let agent = loadAgentConfig(from: item, agentId: agentId) {
                     agents.append(agent)
-                } else {
-                    // 回退到默认配置
-                    agents.append(createDefaultAgent(id: agentId))
                 }
+                // 没有 config.yaml 的跳过
             }
         }
         
         // 按名称排序
         agents.sort { $0.name < $1.name }
         
-        // 确保至少有默认 agent
+        // 如果没有找到任何 agent，使用默认列表
         if agents.isEmpty {
             agents = [
                 .default,

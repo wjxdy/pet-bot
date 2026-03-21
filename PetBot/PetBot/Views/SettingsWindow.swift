@@ -4,6 +4,8 @@
 import Cocoa
 
 class SettingsWindowController: NSWindowController {
+    static var shared: SettingsWindowController?
+    
     private var viewModel: AgentViewModel!
     
     func setup(with viewModel: AgentViewModel) {
@@ -11,6 +13,8 @@ class SettingsWindowController: NSWindowController {
     }
     
     func showSettings() {
+        SettingsWindowController.shared = self
+        
         // 计算内容高度（根据 agent 数量）
         let agentCount = viewModel.availableAgents.count
         let contentHeight: CGFloat = 520 + CGFloat(agentCount * 35)
@@ -289,5 +293,6 @@ class SettingsWindowController: NSWindowController {
         }
         
         window.close()
+        SettingsWindowController.shared = nil
     }
 }

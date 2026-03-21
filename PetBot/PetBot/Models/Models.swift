@@ -30,15 +30,6 @@ extension Agent {
     
     // 从本地 .openclaw 配置读取 agent 列表
     private static func loadAgentsFromConfig() -> [Agent] {
-        let configPath = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".openclaw/agents/shennong/workspace/AGENTS.md")
-        
-        // 如果配置文件存在，尝试读取
-        if FileManager.default.fileExists(atPath: configPath.path) {
-            // 这里可以添加解析逻辑
-            // 暂时返回默认列表
-        }
-        
         // 扫描 .openclaw/agents 目录
         let agentsDir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".openclaw/agents")
@@ -52,30 +43,96 @@ extension Agent {
         ) {
             for item in contents {
                 let agentId = item.lastPathComponent
-                // 排除非 agent 目录
-                if !agentId.hasPrefix(".") && agentId != "shennong" {
-                    agents.append(Agent(
-                        id: agentId,
-                        name: agentId.capitalized,
-                        description: "OpenClaw Agent",
-                        colorHex: "#007AFF",
-                        icon: "🤖"
-                    ))
+                // 排除隐藏目录和非目录项
+                guard !agentId.hasPrefix(".") else { continue }
+                
+                // 尝试读取 config.yaml
+                if let agent = loadAgentConfig(from: item, agentId: agentId) {
+                    agents.append(agent)
+                } else {
+                    // 回退到默认配置
+                    agents.append(createDefaultAgent(id: agentId))
                 }
             }
         }
+        
+        // 按名称排序
+        agents.sort { $0.name < $1.name }
         
         // 确保至少有默认 agent
         if agents.isEmpty {
             agents = [
                 .default,
                 Agent(id: "shennong", name: "神农", description: "AI 功能实验师", colorHex: "#FF6B35", icon: "🌿"),
-                Agent(id: "main", name: "主助手", description: "通用 AI 助手", colorHex: "#007AFF", icon: "🤖"),
-                Agent(id: "claude", name: "Claude", description: "Anthropic Claude", colorHex: "#8E44AD", icon: "🧠")
+                Agent(id: "main", name: "主助手", description: "通用 AI 助手", colorHex: "#007AFF", icon: "🤖")
             ]
         }
         
         return agents
+    }
+    
+    private static func loadAgentConfig(from path: URL, agentId: String) -> Agent? {
+        let configPath = path.appendingPathComponent("config.yaml")
+        
+        guard FileManager.default.fileExists(atPath: configPath.path),
+              let content = try? String(contentsOf: configPath, encoding: .utf8) else {
+            return nil
+        }
+        
+        // 简单解析 YAML
+        let name = parseYamlValue(content, key: "name") ?? agentId.capitalized
+        let description = parseYamlValue(content, key: "description") ?? "OpenClaw Agent"
+        let colorHex = parseYamlValue(content, key: "color") ?? "#007AFF"
+        let icon = parseYamlValue(content, key: "icon") ?? "🤖"
+        
+        return Agent(
+            id: agentId,
+            name: name,
+            description: description,
+            colorHex: colorHex,
+            icon: icon
+        )
+    }
+    
+    private static func parseYamlValue(_ content: String, key: String) -> String? {
+        let pattern = "^\\s*" + key + "\\s*:\\s*(.+)$"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.anchorsMatchLines, .caseInsensitive]) else {
+            return nil
+        }
+        
+        let range = NSRange(content.startIndex..., in: content)
+        if let match = regex.firstMatch(in: content, options: [], range: range),
+           let valueRange = Range(match.range(at: 1), in: content) {
+            return String(content[valueRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
+        return nil
+    }
+    
+    private static func createDefaultAgent(id: String) -> Agent {
+        // 预定义一些常用 agent 的信息
+        let defaults: [String: (name: String, desc: String, icon: String, color: String)] = [
+            "search": ("小米鼠", "擅长信息检索", "🐭", "#FF9500"),
+            "shennong": ("神农", "AI 功能实验师", "🌿", "#FF6B35"),
+            "main": ("主助手", "通用 AI 助手", "🤖", "#007AFF"),
+            "codex": ("Codex", "编程助手", "💻", "#34C759"),
+            "dijkstra": ("Dijkstra", "算法专家", "📊", "#5856D6"),
+            "english-teacher": ("英语老师", "语言学习助手", "📚", "#FF2D55"),
+            "napoleon": ("拿破仑", "战略顾问", "⚔️", "#AF52DE"),
+            "super-helper": ("超级助手", "全能助手", "⭐", "#FFCC00")
+        ]
+        
+        if let info = defaults[id] {
+            return Agent(id: id, name: info.name, description: info.desc, colorHex: info.color, icon: info.icon)
+        }
+        
+        return Agent(
+            id: id,
+            name: id.capitalized,
+            description: "OpenClaw Agent",
+            colorHex: "#007AFF",
+            icon: "🤖"
+        )
     }
 }
 

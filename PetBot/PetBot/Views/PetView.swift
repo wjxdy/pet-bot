@@ -82,14 +82,14 @@ struct PetView: View {
 struct PetImageView: View {
     let imagePath: String
     
-    // 计算缩放后的尺寸
+    // 计算缩放后的尺寸（最大高度130px）
     private var scaledSize: CGSize {
         if let image = NSImage(contentsOfFile: imagePath) {
-            let maxHeight: CGFloat = 160
+            let maxHeight: CGFloat = 130
             let scale = min(1.0, maxHeight / image.size.height)
             return CGSize(width: image.size.width * scale, height: image.size.height * scale)
         }
-        return CGSize(width: 123, height: 160)
+        return CGSize(width: 100, height: 130)
     }
     
     var body: some View {

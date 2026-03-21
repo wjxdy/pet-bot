@@ -36,7 +36,7 @@ struct PetView: View {
                 
                 // === 名字在下（透明背景+阴影）===
                 Text(agentManager.currentAgent.name)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white)
                     .shadow(color: .black.opacity(0.8), radius: 2, x: 0, y: 1)
                     .padding(.horizontal, 8)

@@ -17,27 +17,44 @@ class ChatHistoryWindowController: NSWindowController {
     private var chatHistories: [String: [ChatMessage]] = [:]
     
     func setup(with viewModel: AgentViewModel) {
+        print("[ChatHistory] Setup called with viewModel")
         self.viewModel = viewModel
         loadChatHistories()
+        print("[ChatHistory] Setup completed, agents count: \(viewModel.availableAgents.count)")
     }
     
     func showChatWindow() {
+        print("[ChatHistory] showChatWindow called")
         ChatHistoryWindowController.shared = self
         
-        if window == nil {
-            print("[ChatHistory] Creating window...")
-            createWindow()
-        }
-        
-        guard let window = window else {
-            print("[ChatHistory] Failed to create window!")
+        // 检查 viewModel
+        guard viewModel != nil else {
+            print("[ChatHistory] ERROR: viewModel is nil!")
             return
         }
         
-        print("[ChatHistory] Showing window...")
+        if window == nil {
+            print("[ChatHistory] Window is nil, creating...")
+            createWindow()
+        } else {
+            print("[ChatHistory] Window already exists")
+        }
+        
+        guard let window = window else {
+            print("[ChatHistory] ERROR: Failed to create window!")
+            return
+        }
+        
+        print("[ChatHistory] Making window key and front...")
         window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-        print("[ChatHistory] Window should be visible now")
+        
+        print("[ChatHistory] Activating app...")
+        let activated = NSApp.activate(ignoringOtherApps: true)
+        print("[ChatHistory] App activation result: \(activated)")
+        
+        print("[ChatHistory] Window frame: \(window.frame)")
+        print("[ChatHistory] Window isVisible: \(window.isVisible)")
+        print("[ChatHistory] Window isKeyWindow: \(window.isKeyWindow)")
     }
     
     func addMessage(_ message: ChatMessage, for agentId: String) {

@@ -205,16 +205,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Settings
     @objc private func openChatHistory() {
-        print("[PetBot] Opening chat history...")
-        
-        // 恢复使用 ChatHistoryWindowController
-        if ChatHistoryWindowController.shared == nil {
-            print("[PetBot] Creating ChatHistoryWindowController...")
-            let controller = ChatHistoryWindowController()
-            controller.setup(with: viewModel)
-        }
-        print("[PetBot] Showing chat window...")
-        ChatHistoryWindowController.shared?.showChatWindow()
+        // 使用简化版聊天历史窗口
+        ChatHistoryManager.show(viewModel: viewModel)
     }
     
     @objc private func openSettings() {

@@ -14,60 +14,21 @@ class OpenClawClient {
     }
     
     func sendMessage(message: String, agentId: String, endpoint: String) async throws -> String {
-        // OpenClaw Gateway HTTP API
+        // 模拟响应（用于测试气泡显示）
+        // 实际使用时，这里应该连接真实的 OpenClaw Gateway
+        
+        // 延迟一下模拟网络请求
+        try await Task.sleep(nanoseconds: 500_000_000) // 0.5秒
+        
+        // 返回模拟响应
+        return "收到消息：\(message)\n\n我是 \(agentId)，正在测试中..."
+        
+        /* 实际 API 调用代码（暂时注释）
         guard let url = URL(string: "http://127.0.0.1:18789/api/v1/chat") else {
             throw OpenClawError.invalidURL
         }
-        
-        // 构建请求体 - 使用 OpenClaw 格式
-        let requestBody: [String: Any] = [
-            "message": message,
-            "agent_id": agentId,
-            "channel": "direct",
-            "stream": false
-        ]
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
-        
-        // 发送请求
-        let (data, response) = try await session.data(for: request)
-        
-        // 检查响应
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw OpenClawError.invalidResponse
-        }
-        
-        // 打印调试信息
-        if let responseString = String(data: data, encoding: .utf8) {
-            print("OpenClaw Response: \(responseString)")
-        }
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw OpenClawError.serverError(statusCode: httpResponse.statusCode, message: errorText)
-        }
-        
-        // 尝试解析不同格式的响应
-        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            // 尝试从 response 或 message 或 content 字段获取
-            if let content = json["response"] as? String {
-                return content
-            } else if let content = json["message"] as? String {
-                return content
-            } else if let content = json["content"] as? String {
-                return content
-            } else if let choices = json["choices"] as? [[String: Any]],
-                      let first = choices.first,
-                      let content = first["content"] as? String {
-                return content
-            }
-        }
-        
-        // 如果无法解析，返回原始文本
-        return String(data: data, encoding: .utf8) ?? "无法解析响应"
+        ...
+        */
     }
 }
 

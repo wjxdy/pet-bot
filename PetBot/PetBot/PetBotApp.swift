@@ -38,7 +38,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func setupPetWindow() {
-        let contentView = PetView()
+        let contentView = PetView(petWindow: nil)
         
         petWindow = PetWindow(
             contentRect: NSRect(origin: .zero, size: AppConfiguration.petWindowSize),
@@ -49,6 +49,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         petWindow?.contentView = NSHostingView(rootView: contentView)
         petWindow?.makeKeyAndOrderFront(nil)
+        
+        // 窗口移动时更新气泡位置
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowDidMove),
+            name: NSWindow.didMoveNotification,
+            object: petWindow
+        )
+    }
+    
+    @objc private func windowDidMove() {
+        // 宠物窗口移动时，气泡窗口会跟随（因为它们是独立的）
+        // 如果气泡可见，更新其位置
+        if BubbleWindowController.shared.isVisible {
+            BubbleWindowController.shared.show(
+                text: "",
+                anchorWindow: petWindow
+            )
+        }
     }
     
     private func setupStatusBar() {

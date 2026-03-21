@@ -149,10 +149,10 @@ class InputWindowController: NSObject, NSWindowDelegate {
             button.heightAnchor.constraint(equalToConstant: 36)
         ])
         
-        // 创建无边框窗口
+        // 创建无边框窗口（使用 HUD 面板样式，可以接收键盘事件）
         let window = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 420, height: 70),
-            styleMask: [.borderless, .nonactivatingPanel],
+            styleMask: [.borderless, .closable],
             backing: .buffered,
             defer: false
         )

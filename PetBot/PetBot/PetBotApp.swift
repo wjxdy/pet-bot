@@ -280,10 +280,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         petYField.stringValue = "\(Int(UserDefaults.standard.double(forKey: "petInitialY")))"
         contentView.addSubview(petYField)
         
-        // 保存引用
-        petXField.tag = 100
-        petYField.tag = 101
-        
         y -= 50
         
         // Agent 选择
@@ -316,16 +312,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         doneButton.keyEquivalent = "\r"
         doneButton.target = self
         doneButton.action = #selector(closeSettingsWindow(_:))
-        // 存储窗口引用
-        doneButton.tag = Int(bitPattern: Unmanaged.passUnretained(window).toOpaque())
         contentView.addSubview(doneButton)
         
         window.contentView = contentView
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        
-        // 临时存储窗口
-        objc_setAssociatedObject(self, "settingsWindow", window, .OBJC_ASSOCIATION_RETAIN)
     }
     
     @objc private func settingsAgentSelected(_ sender: NSButton) {
@@ -335,23 +326,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc private func closeSettingsWindow(_ sender: NSButton) {
-        // 保存 Pet 位置设置
-        if let window = objc_getAssociatedObject(self, "settingsWindow") as? NSWindow,
-           let contentView = window.contentView {
-            if let xField = contentView.viewWithTag(100) as? NSTextField,
-               let yField = contentView.viewWithTag(101) as? NSTextField {
-                if let x = Double(xField.stringValue) {
-                    UserDefaults.standard.set(x, forKey: "petInitialX")
-                }
-                if let y = Double(yField.stringValue) {
-                    UserDefaults.standard.set(y, forKey: "petInitialY")
+        guard let window = sender.window, let contentView = window.contentView else { return }
+        
+        // 查找 X 和 Y 输入框（通过遍历 subviews）
+        var xField: NSTextField?
+        var yField: NSTextField?
+        
+        for view in contentView.subviews {
+            if let textField = view as? NSTextField {
+                // 通过位置或标签来识别 X 和 Y 字段
+                if textField.frame.origin.x == 70 && textField.frame.width == 80 {
+                    xField = textField
+                } else if textField.frame.origin.x == 200 && textField.frame.width == 80 {
+                    yField = textField
                 }
             }
         }
         
-        if let window = objc_getAssociatedObject(self, "settingsWindow") as? NSWindow {
-            window.close()
+        // 保存 Pet 位置设置
+        if let xText = xField?.stringValue, let x = Double(xText) {
+            UserDefaults.standard.set(x, forKey: "petInitialX")
         }
+        if let yText = yField?.stringValue, let y = Double(yText) {
+            UserDefaults.standard.set(y, forKey: "petInitialY")
+        }
+        
+        // 关闭窗口
+        window.close()
     }
     
     // MARK: - Quit

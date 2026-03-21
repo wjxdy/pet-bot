@@ -28,11 +28,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 注册默认配置
         AppConfiguration.registerDefaults()
         
+        // 设置应用为常规模式（显示在Dock中）
+        NSApp.setActivationPolicy(.regular)
+        
+        setupMainMenu()
         setupPetWindow()
         setupStatusBar()
         setupHotkey()
         
-        NSApp.setActivationPolicy(.accessory)
         AppLogger.success("PetBot 启动完成")
     }
     
@@ -41,8 +44,88 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         InputWindowController.shared.close()
     }
     
+    // MARK: - Main Menu
+    private func setupMainMenu() {
+        let mainMenu = NSMenu()
+        
+        // PetBot 菜单
+        let appMenuItem = NSMenuItem()
+        appMenuItem.submenu = createAppMenu()
+        mainMenu.addItem(appMenuItem)
+        
+        // 编辑菜单（支持复制粘贴）
+        let editMenuItem = NSMenuItem()
+        editMenuItem.submenu = createEditMenu()
+        mainMenu.addItem(editMenuItem)
+        
+        // 窗口菜单
+        let windowMenuItem = NSMenuItem()
+        windowMenuItem.submenu = createWindowMenu()
+        mainMenu.addItem(windowMenuItem)
+        
+        NSApp.mainMenu = mainMenu
+    }
+    
+    private func createAppMenu() -> NSMenu {
+        let menu = NSMenu(title: "PetBot")
+        
+        // 关于
+        menu.addItem(NSMenuItem(title: "关于 PetBot", action: #selector(showAbout), keyEquivalent: ""))
+        menu.addItem(NSMenuItem.separator())
+        
+        // 设置
+        let settingsItem = NSMenuItem(title: "设置...", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.keyEquivalentModifierMask = .command
+        menu.addItem(settingsItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        // 隐藏
+        menu.addItem(NSMenuItem(title: "隐藏 PetBot", action: #selector(NSApp.hide(_:)), keyEquivalent: "h"))
+        menu.addItem(NSMenuItem(title: "隐藏其他", action: #selector(NSApp.hideOtherApplications(_:)), keyEquivalent: "h"))
+        menu.addItem(NSMenuItem(title: "显示全部", action: #selector(NSApp.unhideAllApplications(_:)), keyEquivalent: ""))
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        // 退出
+        let quitItem = NSMenuItem(title: "退出 PetBot", action: #selector(quit), keyEquivalent: "q")
+        quitItem.keyEquivalentModifierMask = .command
+        menu.addItem(quitItem)
+        
+        return menu
+    }
+    
+    private func createEditMenu() -> NSMenu {
+        let menu = NSMenu(title: "编辑")
+        menu.addItem(NSMenuItem(title: "撤销", action: Selector(("undo:")), keyEquivalent: "z"))
+        menu.addItem(NSMenuItem(title: "重做", action: Selector(("redo:")), keyEquivalent: "Z"))
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "剪切", action: #selector(NSText.cut(_:)), keyEquivalent: "x"))
+        menu.addItem(NSMenuItem(title: "复制", action: #selector(NSText.copy(_:)), keyEquivalent: "c"))
+        menu.addItem(NSMenuItem(title: "粘贴", action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
+        menu.addItem(NSMenuItem(title: "全选", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
+        return menu
+    }
+    
+    private func createWindowMenu() -> NSMenu {
+        let menu = NSMenu(title: "窗口")
+        menu.addItem(NSMenuItem(title: "最小化", action: #selector(NSWindow.miniaturize(_:)), keyEquivalent: "m"))
+        menu.addItem(NSMenuItem(title: "关闭", action: #selector(NSWindow.close), keyEquivalent: "w"))
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "前置全部窗口", action: #selector(NSApp.arrangeInFront(_:)), keyEquivalent: ""))
+        return menu
+    }
+    
+    @objc private func showAbout() {
+        let alert = NSAlert()
+        alert.messageText = "PetBot"
+        alert.informativeText = "版本 1.0.0\n\n你的桌面 AI 宠物助手\n支持多 Agent 切换"
+        alert.alertStyle = .informational
+        alert.runModal()
+    }
+    
+    // MARK: - Pet Window
     private func setupPetWindow() {
-        // 先创建窗口
         petWindow = PetWindow(
             contentRect: NSRect(origin: .zero, size: AppConfiguration.petWindowSize),
             styleMask: [.borderless],
@@ -50,13 +133,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             defer: false
         )
         
-        // 再创建视图，传入窗口引用
         let contentView = PetView(petWindow: petWindow)
-        
         petWindow?.contentView = NSHostingView(rootView: contentView)
         petWindow?.makeKeyAndOrderFront(nil)
     }
     
+    // MARK: - Status Bar
     private func setupStatusBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
@@ -82,13 +164,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(agentItem)
         
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "设置...", action: #selector(openSettings), keyEquivalent: ","))
+        menu.addItem(NSMenuItem(title: "打开设置", action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "退出", action: #selector(quit), keyEquivalent: "q"))
         
         statusItem?.menu = menu
     }
     
+    // MARK: - Hotkey
     private func setupHotkey() {
         HotkeyManager.shared.register()
         HotkeyManager.shared.onHotkeyPressed = { [weak self] in
@@ -113,6 +196,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
+    // MARK: - Settings
     @objc private func openSettings() {
         if settingsWindow == nil {
             let settingsView = SettingsView(agentViewModel: viewModel)
@@ -120,7 +204,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             
             let window = NSWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 450, height: 500),
-                styleMask: [.titled, .closable],
+                styleMask: [.titled, .closable, .miniaturizable],
                 backing: .buffered,
                 defer: false
             )
@@ -135,6 +219,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
     
+    // MARK: - Quit
     @objc private func quit() {
         InputWindowController.shared.close()
         NSApp.terminate(nil)

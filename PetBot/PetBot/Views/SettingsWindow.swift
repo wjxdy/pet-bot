@@ -151,7 +151,7 @@ class SettingsWindowController: NSWindowController {
         maxHeightField.stringValue = "\(Int(AppConfiguration.petMaxHeight))"
         documentView.addSubview(maxHeightField)
         
-        let hintLabel = NSTextField(labelWithString: "(超过此高度将等比例缩放)")
+        let hintLabel = NSTextField(labelWithString: "(图片将缩放至此高度)")
         hintLabel.font = NSFont.systemFont(ofSize: 11)
         hintLabel.textColor = .secondaryLabelColor
         hintLabel.sizeToFit()

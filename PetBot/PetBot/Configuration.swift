@@ -24,23 +24,19 @@ enum AppConfiguration {
     private static let maxPetHeight: CGFloat = 130
     
     private static func getScaledImageSize() -> CGSize {
-        let maxHeight = petMaxHeight
+        let targetHeight = petMaxHeight
         
         if let image = NSImage(contentsOfFile: petImagePath) {
             let originalSize = image.size
             
-            // 只有当图片高度超过最大高度时才等比例缩放
-            if originalSize.height > maxHeight {
-                let scale = maxHeight / originalSize.height
-                let scaledWidth = originalSize.width * scale
-                let scaledHeight = originalSize.height * scale
-                return CGSize(width: scaledWidth, height: scaledHeight + 25)
-            } else {
-                // 图片高度小于等于最大高度，保持原大小
-                return CGSize(width: originalSize.width, height: originalSize.height + 25)
-            }
+            // 始终缩放到目标高度（小图放大，大图缩小）
+            let scale = targetHeight / originalSize.height
+            let scaledWidth = originalSize.width * scale
+            let scaledHeight = targetHeight
+            
+            return CGSize(width: scaledWidth, height: scaledHeight + 25)
         }
-        return CGSize(width: 100, height: 155)
+        return CGSize(width: 100, height: targetHeight + 25)
     }
     
     // MARK: - Assets

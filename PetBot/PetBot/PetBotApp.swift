@@ -18,11 +18,15 @@ struct PetBotApp: App {
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     var petWindow: PetWindow?
+    var settingsWindow: NSWindow?
     var statusItem: NSStatusItem?
     let viewModel = AgentViewModel()
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppLogger.info("PetBot 启动中...")
+        
+        // 注册默认配置
+        AppConfiguration.registerDefaults()
         
         setupPetWindow()
         setupStatusBar()
@@ -78,6 +82,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(agentItem)
         
         menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "设置...", action: #selector(openSettings), keyEquivalent: ","))
+        menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "退出", action: #selector(quit), keyEquivalent: "q"))
         
         statusItem?.menu = menu
@@ -105,6 +111,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 item.state = (item.representedObject as? String) == agentId ? .on : .off
             }
         }
+    }
+    
+    @objc private func openSettings() {
+        if settingsWindow == nil {
+            let settingsView = SettingsView(agentViewModel: viewModel)
+            let hostingController = NSHostingController(rootView: settingsView)
+            
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 450, height: 500),
+                styleMask: [.titled, .closable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "PetBot 设置"
+            window.contentViewController = hostingController
+            window.isReleasedWhenClosed = false
+            
+            settingsWindow = window
+        }
+        
+        settingsWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
     
     @objc private func quit() {

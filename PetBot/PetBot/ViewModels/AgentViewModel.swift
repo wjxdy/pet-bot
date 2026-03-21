@@ -19,8 +19,15 @@ class AgentViewModel: ObservableObject {
     // MARK: - Initialization
     init(apiService: OpenClawAPIService = .shared) {
         self.apiService = apiService
-        self.currentAgent = .default
         self.availableAgents = Agent.all
+        
+        // 使用配置的 agent ID
+        let savedAgentId = AppConfiguration.selectedAgentId
+        if let agent = Agent.all.first(where: { $0.id == savedAgentId }) {
+            self.currentAgent = agent
+        } else {
+            self.currentAgent = .default
+        }
     }
     
     // MARK: - Public Methods
@@ -31,6 +38,9 @@ class AgentViewModel: ObservableObject {
             currentAgent = agent
             errorMessage = nil
         }
+        
+        // 保存到配置
+        AppConfiguration.selectedAgentId = agent.id
         
         AppLogger.info("切换到 Agent: \(agent.name)")
     }

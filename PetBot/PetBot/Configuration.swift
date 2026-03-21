@@ -12,13 +12,9 @@ enum AppConfiguration {
         "http://\(gatewayHost):\(gatewayPort)"
     }
     
-    // MARK: - Default Agent
-    static let defaultAgentId = "search" // 小米鼠
-    
     // MARK: - UI Configuration
-    // 窗口大小自动根据图片尺寸计算
-    static let inputWindowSize = CGSize(width: 300, height: 100)
-    static let bubbleMaxWidth: CGFloat = 200
+    static let inputWindowSize = CGSize(width: 400, height: 60)
+    static let bubbleMaxWidth: CGFloat = 240
     
     // 动态计算宠物窗口大小（图片按比例缩放，最大高度130px）
     static var petWindowSize: CGSize {
@@ -33,10 +29,9 @@ enum AppConfiguration {
             let scale = min(1.0, maxPetHeight / originalSize.height)
             let scaledWidth = originalSize.width * scale
             let scaledHeight = originalSize.height * scale
-            // 窗口大小 = 缩放后图片 + 名字标签空间
             return CGSize(width: scaledWidth, height: scaledHeight + 25)
         }
-        return CGSize(width: 100, height: 155) // 默认 (200*0.65, 130+25)
+        return CGSize(width: 100, height: 155)
     }
     
     // MARK: - Assets
@@ -44,6 +39,65 @@ enum AppConfiguration {
     
     // MARK: - Hotkey
     static let hotkeyKeyCode: UInt16 = 0x31 // Space key
+    
+    // MARK: - User Configurable Settings
+    
+    /// 气泡自动消失时间（秒），-1 表示永不消失
+    static var bubbleAutoHideSeconds: Double {
+        get { UserDefaults.standard.double(forKey: "bubbleAutoHideSeconds") }
+        set { UserDefaults.standard.set(newValue, forKey: "bubbleAutoHideSeconds") }
+    }
+    
+    /// Pet 初始位置 X
+    static var petInitialX: Double {
+        get { UserDefaults.standard.double(forKey: "petInitialX") }
+        set { UserDefaults.standard.set(newValue, forKey: "petInitialX") }
+    }
+    
+    /// Pet 初始位置 Y
+    static var petInitialY: Double {
+        get { UserDefaults.standard.double(forKey: "petInitialY") }
+        set { UserDefaults.standard.set(newValue, forKey: "petInitialY") }
+    }
+    
+    /// 气泡相对 Pet X 偏移
+    static var bubbleOffsetX: Double {
+        get { UserDefaults.standard.double(forKey: "bubbleOffsetX") }
+        set { UserDefaults.standard.set(newValue, forKey: "bubbleOffsetX") }
+    }
+    
+    /// 气泡相对 Pet Y 偏移
+    static var bubbleOffsetY: Double {
+        get { UserDefaults.standard.double(forKey: "bubbleOffsetY") }
+        set { UserDefaults.standard.set(newValue, forKey: "bubbleOffsetY") }
+    }
+    
+    /// 选中的 Agent ID
+    static var selectedAgentId: String {
+        get { UserDefaults.standard.string(forKey: "selectedAgentId") ?? "search" }
+        set { UserDefaults.standard.set(newValue, forKey: "selectedAgentId") }
+    }
+    
+    /// 是否自动读取 OpenClaw Agent 名字
+    static var autoReadAgentName: Bool {
+        get { UserDefaults.standard.bool(forKey: "autoReadAgentName") }
+        set { UserDefaults.standard.set(newValue, forKey: "autoReadAgentName") }
+    }
+    
+    // MARK: - Default Values
+    
+    static func registerDefaults() {
+        let defaults: [String: Any] = [
+            "bubbleAutoHideSeconds": 10.0,
+            "petInitialX": 1000.0,
+            "petInitialY": 100.0,
+            "bubbleOffsetX": 0.0,
+            "bubbleOffsetY": 5.0,
+            "selectedAgentId": "search",
+            "autoReadAgentName": true
+        ]
+        UserDefaults.standard.register(defaults: defaults)
+    }
 }
 
 // MARK: - Logger

@@ -22,15 +22,9 @@ class PetWindow: NSWindow {
     }
     
     private func setupInitialPosition() {
-        guard let screen = NSScreen.main else { return }
+        let x = AppConfiguration.petInitialX
+        let y = AppConfiguration.petInitialY
         
-        let screenRect = screen.visibleFrame
-        let windowSize = frame.size
-        let origin = CGPoint(
-            x: screenRect.maxX - windowSize.width,
-            y: 40
-        )
-        
-        setFrameOrigin(origin)
+        setFrameOrigin(NSPoint(x: x, y: y))
     }
 }

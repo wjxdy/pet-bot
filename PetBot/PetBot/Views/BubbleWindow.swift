@@ -63,10 +63,14 @@ class BubbleWindowController: NSObject {
         // 取消之前的定时器
         hideTimer?.invalidate()
         
-        // 创建新的定时器，10秒后自动隐藏
-        hideTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
+        // 获取配置的时间，-1 表示永不消失
+        let seconds = AppConfiguration.bubbleAutoHideSeconds
+        guard seconds > 0 else { return }
+        
+        // 创建新的定时器
+        hideTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { [weak self] _ in
             DispatchQueue.main.async {
-                print("[PetBot] 气泡10秒无新消息，自动隐藏")
+                print("[PetBot] 气泡 \(Int(seconds)) 秒无新消息，自动隐藏")
                 self?.hide()
             }
         }
@@ -135,14 +139,16 @@ class BubbleWindowController: NSObject {
             // 获取锚定窗口的屏幕坐标
             let anchorFrame = anchor.frame
             
-            // 气泡紧挨着宠物左上角
-            // X: 与宠物左边对齐
-            // Y: 宠物顶部上方一点点
-            let x = anchorFrame.origin.x - 230
-            let y = anchorFrame.origin.y + anchorFrame.height + 5
+            // 使用配置的偏移量
+            let offsetX = AppConfiguration.bubbleOffsetX
+            let offsetY = AppConfiguration.bubbleOffsetY
+            
+            // 气泡位置：宠物左上角 + 偏移
+            let x = anchorFrame.origin.x + offsetX
+            let y = anchorFrame.origin.y + anchorFrame.height + offsetY
             
             window.setFrameOrigin(NSPoint(x: x, y: y))
-            print("[PetBot] 气泡位置: (\(x), \(y)), 宠物: (\(anchorFrame.origin.x), \(anchorFrame.origin.y), \(anchorFrame.width)x\(anchorFrame.height))")
+            print("[PetBot] 气泡位置: (\(x), \(y)), 偏移: (\(offsetX), \(offsetY))")
         }
     }
 }

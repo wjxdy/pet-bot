@@ -14,6 +14,7 @@ struct PetBotApp: App {
     }
 }
 
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     var petWindow: PetWindow?
     var statusItem: NSStatusItem?

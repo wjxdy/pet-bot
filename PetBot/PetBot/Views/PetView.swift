@@ -34,17 +34,13 @@ struct PetView: View {
                 PetImage()
                     .frame(width: 130, height: 130)
                 
-                // === 名字在下（更小字体）===
+                // === 名字在下（透明背景+阴影）===
                 Text(agentManager.currentAgent.name)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(
-                        Capsule()
-                            .fill(agentManager.currentAgent.color.opacity(0.9))
-                            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                    )
+                    .shadow(color: .black.opacity(0.8), radius: 2, x: 0, y: 1)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
                     .padding(.bottom, 20)
             }
         }

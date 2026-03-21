@@ -4,6 +4,7 @@
 import SwiftUI
 import AppKit
 
+@MainActor
 class InputWindowController: NSObject {
     static let shared = InputWindowController()
     
@@ -32,11 +33,9 @@ class InputWindowController: NSObject {
         window?.makeKeyAndOrderFront(nil)
         
         // 激活应用，确保输入有效
-        DispatchQueue.main.async {
-            NSApp.activate(ignoringOtherApps: true)
-            self.window?.makeKeyWindow()
-            self.textField?.becomeFirstResponder()
-        }
+        NSApp.activate(ignoringOtherApps: true)
+        window?.makeKey()
+        textField?.becomeFirstResponder()
     }
     
     func hide() {
@@ -141,7 +140,7 @@ class InputWindowController: NSObject {
         inputBorder.layer?.borderColor = NSColor.white.withAlphaComponent(0.15).cgColor
         inputContainer.addSubview(inputBorder)
         
-        // 文本输入框
+        // 文本输入框 - 使用 NSTextField 创建可编辑的输入框
         let textField = NSTextField(frame: NSRect(x: 12, y: 8, width: 296, height: 28))
         textField.placeholderString = "给 Agent 发送消息..."
         textField.font = NSFont.systemFont(ofSize: 14)
@@ -149,6 +148,8 @@ class InputWindowController: NSObject {
         textField.isBordered = false
         textField.backgroundColor = .clear
         textField.focusRingType = .none
+        textField.isEditable = true  // 关键：允许编辑
+        textField.isSelectable = true // 允许选择
         textField.target = self
         textField.action = #selector(sendButtonClicked)
         
@@ -221,6 +222,7 @@ class InputWindowController: NSObject {
 }
 
 // Pet 窗口控制器
+@MainActor
 class PetWindowController: NSObject {
     static let shared = PetWindowController()
     weak var petWindow: NSWindow?

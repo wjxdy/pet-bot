@@ -85,6 +85,56 @@ class ChatHistoryWindow: NSWindow {
         DispatchQueue.main.async { [weak self] in
             self?.splitView.setPosition(200, ofDividerAt: 0)
         }
+        
+        // 加载历史消息
+        loadChatHistory()
+    }
+    
+    private func loadChatHistory() {
+        guard !viewModel.messages.isEmpty else { return }
+        
+        let attributedString = NSMutableAttributedString()
+        attributedString.append(NSAttributedString(
+            string: "与 \(viewModel.currentAgent.name) 的聊天记录\n\n",
+            attributes: [
+                .font: NSFont.boldSystemFont(ofSize: 14),
+                .foregroundColor: NSColor.textColor
+            ]
+        ))
+        
+        for message in viewModel.messages {
+            let prefix = message.isUser ? "你" : message.agentName
+            let prefixColor: NSColor = message.isUser ? .systemBlue : .systemGreen
+            
+            // 添加前缀
+            let prefixAttr = NSAttributedString(
+                string: "[\(prefix)]: ",
+                attributes: [
+                    .font: NSFont.boldSystemFont(ofSize: 13),
+                    .foregroundColor: prefixColor
+                ]
+            )
+            attributedString.append(prefixAttr)
+            
+            // 添加消息内容
+            let contentAttr = NSAttributedString(
+                string: "\(message.content)\n",
+                attributes: [
+                    .font: NSFont.systemFont(ofSize: 13),
+                    .foregroundColor: NSColor.textColor
+                ]
+            )
+            attributedString.append(contentAttr)
+        }
+        
+        chatTextView?.textStorage?.setAttributedString(attributedString)
+        scrollToBottom()
+    }
+    
+    private func scrollToBottom() {
+        guard let textView = chatTextView else { return }
+        let range = NSRange(location: textView.string.count, length: 0)
+        textView.scrollRangeToVisible(range)
     }
     
     private func updateTableViewSelection() {
@@ -94,8 +144,40 @@ class ChatHistoryWindow: NSWindow {
     }
     
     func appendMessage(_ text: String, isUser: Bool) {
+        guard let textView = chatTextView else { return }
+        
         let prefix = isUser ? "你" : viewModel.currentAgent.name
-        chatTextView?.string += "[\(prefix)]: \(text)\n"
+        let prefixColor: NSColor = isUser ? .systemBlue : .systemGreen
+        
+        // 创建带属性的消息
+        let attributedString = NSMutableAttributedString()
+        
+        // 添加前缀
+        let prefixAttr = NSAttributedString(
+            string: "[\(prefix)]: ",
+            attributes: [
+                .font: NSFont.boldSystemFont(ofSize: 13),
+                .foregroundColor: prefixColor
+            ]
+        )
+        attributedString.append(prefixAttr)
+        
+        // 添加消息内容
+        let contentAttr = NSAttributedString(
+            string: "\(text)\n",
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 13),
+                .foregroundColor: NSColor.textColor
+            ]
+        )
+        attributedString.append(contentAttr)
+        
+        // 使用 textStorage 追加
+        textView.textStorage?.append(attributedString)
+        
+        // 滚动到底部
+        let range = NSRange(location: textView.string.count, length: 0)
+        textView.scrollRangeToVisible(range)
     }
 }
 
@@ -178,7 +260,10 @@ extension ChatHistoryWindow: NSTableViewDelegate {
         
         // 更新聊天标题和内容
         self.title = "与 \(selectedAgent.name) 的聊天"
-        chatTextView?.string = "与 \(selectedAgent.name) 的聊天记录\n\n"
+        chatTextView?.string = ""
+        
+        // 重新加载该 Agent 的历史消息
+        loadChatHistory()
         
         // 可选：通知外部刷新聊天记录
         NotificationCenter.default.post(name: .init("AgentDidChange"), object: selectedAgent)

@@ -213,24 +213,29 @@ class BubbleWindowController: NSObject {
             return
         }
         
-        let offsetX = AppConfiguration.bubbleOffsetX
-        let offsetY = AppConfiguration.bubbleOffsetY
+        let offsetX = CGFloat(AppConfiguration.bubbleOffsetX)
+        let offsetY = CGFloat(AppConfiguration.bubbleOffsetY)
         let bubbleWidth: CGFloat = 280
         let bubbleHeight = window.frame.height
         
+        // 计算气泡位置：居中于锚点窗口，使用配置的偏移
         var x = anchorFrame.midX - (bubbleWidth / 2) + offsetX
-        var y = anchorFrame.maxY + 10 + offsetY
+        var y = anchorFrame.maxY + offsetY
         
-        if let screen = anchorWindow?.screen ?? NSScreen.main {
-            let screenFrame = screen.visibleFrame
+        // 获取锚点窗口所在的屏幕进行边界检测
+        let targetScreen = anchor?.screen ?? NSScreen.main
+        if let screenFrame = targetScreen?.visibleFrame {
+            // 确保气泡不超出屏幕右边界
             if x + bubbleWidth > screenFrame.maxX {
                 x = screenFrame.maxX - bubbleWidth - 10
             }
+            // 确保气泡不超出屏幕左边界
             if x < screenFrame.minX {
                 x = screenFrame.minX + 10
             }
+            // 如果气泡超出屏幕上边界，显示在锚点窗口下方
             if y + bubbleHeight > screenFrame.maxY {
-                y = anchorFrame.minY - bubbleHeight - 10 - offsetY
+                y = anchorFrame.minY - bubbleHeight - offsetY
             }
         }
         

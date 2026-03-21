@@ -200,9 +200,12 @@ class SettingsWindowController: NSWindowController {
     }
     
     func showSettings() {
-        if window == nil {
-            setup(with: viewModel ?? AgentViewModel())
+        // 每次都重新创建窗口，避免旧窗口问题
+        if window != nil {
+            window?.close()
+            window = nil
         }
+        setup(with: viewModel ?? AgentViewModel())
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }

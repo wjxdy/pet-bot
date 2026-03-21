@@ -250,6 +250,42 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         y -= 50
         
+        // Pet 初始位置
+        let petLabel = NSTextField(labelWithString: "Pet 初始位置")
+        petLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
+        petLabel.textColor = .secondaryLabelColor
+        petLabel.sizeToFit()
+        petLabel.frame.origin = CGPoint(x: 20, y: y)
+        contentView.addSubview(petLabel)
+        
+        y -= 40
+        
+        // X 位置
+        let petXLabel = NSTextField(labelWithString: "X:")
+        petXLabel.sizeToFit()
+        petXLabel.frame.origin = CGPoint(x: 40, y: y)
+        contentView.addSubview(petXLabel)
+        
+        let petXField = NSTextField(frame: NSRect(x: 70, y: y, width: 80, height: 22))
+        petXField.stringValue = "\(Int(UserDefaults.standard.double(forKey: "petInitialX")))"
+        contentView.addSubview(petXField)
+        
+        // Y 位置
+        let petYLabel = NSTextField(labelWithString: "Y:")
+        petYLabel.sizeToFit()
+        petYLabel.frame.origin = CGPoint(x: 170, y: y)
+        contentView.addSubview(petYLabel)
+        
+        let petYField = NSTextField(frame: NSRect(x: 200, y: y, width: 80, height: 22))
+        petYField.stringValue = "\(Int(UserDefaults.standard.double(forKey: "petInitialY")))"
+        contentView.addSubview(petYField)
+        
+        // 保存引用
+        petXField.tag = 100
+        petYField.tag = 101
+        
+        y -= 50
+        
         // Agent 选择
         let agentLabel = NSTextField(labelWithString: "Agent 选择")
         agentLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
@@ -299,6 +335,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc private func closeSettingsWindow(_ sender: NSButton) {
+        // 保存 Pet 位置设置
+        if let window = objc_getAssociatedObject(self, "settingsWindow") as? NSWindow,
+           let contentView = window.contentView {
+            if let xField = contentView.viewWithTag(100) as? NSTextField,
+               let yField = contentView.viewWithTag(101) as? NSTextField {
+                if let x = Double(xField.stringValue) {
+                    UserDefaults.standard.set(x, forKey: "petInitialX")
+                }
+                if let y = Double(yField.stringValue) {
+                    UserDefaults.standard.set(y, forKey: "petInitialY")
+                }
+            }
+        }
+        
         if let window = objc_getAssociatedObject(self, "settingsWindow") as? NSWindow {
             window.close()
         }

@@ -20,20 +20,23 @@ enum AppConfiguration {
     static let inputWindowSize = CGSize(width: 300, height: 100)
     static let bubbleMaxWidth: CGFloat = 200
     
-    // 动态计算宠物窗口大小（根据图片尺寸）
+    // 动态计算宠物窗口大小（图片按比例缩放，最大高度160px）
     static var petWindowSize: CGSize {
-        getImageSize()
+        getScaledImageSize()
     }
     
-    // 获取图片尺寸并添加边距
-    private static func getImageSize() -> CGSize {
+    private static let maxPetHeight: CGFloat = 160
+    
+    private static func getScaledImageSize() -> CGSize {
         if let image = NSImage(contentsOfFile: petImagePath) {
-            let size = image.size
-            // 图片尺寸 + 底部空间给名字标签
-            return CGSize(width: size.width, height: size.height + 30)
+            let originalSize = image.size
+            let scale = min(1.0, maxPetHeight / originalSize.height)
+            let scaledWidth = originalSize.width * scale
+            let scaledHeight = originalSize.height * scale
+            // 窗口大小 = 缩放后图片 + 名字标签空间
+            return CGSize(width: scaledWidth, height: scaledHeight + 25)
         }
-        // 默认尺寸
-        return CGSize(width: 200, height: 290)
+        return CGSize(width: 123, height: 185) // 默认 (200*0.615, 160+25)
     }
     
     // MARK: - Assets

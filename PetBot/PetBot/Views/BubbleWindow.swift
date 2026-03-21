@@ -11,6 +11,7 @@ class BubbleWindowController: NSObject {
     private var window: NSPanel?
     private var currentText: String = ""
     private var isPositioned = false
+    private var hideTimer: Timer? // 自动隐藏定时器
     
     var isVisible: Bool {
         window?.isVisible ?? false
@@ -38,17 +39,37 @@ class BubbleWindowController: NSObject {
         window?.orderFront(nil)
         window?.alphaValue = 1.0
         
+        // 重置自动隐藏定时器（10秒）
+        resetHideTimer()
+        
         print("[PetBot] 气泡显示: \(text.prefix(30))...")
     }
     
     func hide() {
         window?.orderOut(nil)
+        hideTimer?.invalidate()
+        hideTimer = nil
     }
     
     func close() {
         window?.close()
         window = nil
         isPositioned = false
+        hideTimer?.invalidate()
+        hideTimer = nil
+    }
+    
+    private func resetHideTimer() {
+        // 取消之前的定时器
+        hideTimer?.invalidate()
+        
+        // 创建新的定时器，10秒后自动隐藏
+        hideTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
+            DispatchQueue.main.async {
+                print("[PetBot] 气泡10秒无新消息，自动隐藏")
+                self?.hide()
+            }
+        }
     }
     
     private func createWindow() {

@@ -39,8 +39,7 @@ struct PetView: View {
     
     // MARK: - Actions
     private func toggleInput() {
-        // 关闭气泡
-        BubbleWindowController.shared.hide()
+        // 不再隐藏气泡，气泡有自己的自动隐藏逻辑
         
         if InputWindowController.shared.isVisible {
             InputWindowController.shared.hide()

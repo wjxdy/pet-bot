@@ -59,12 +59,26 @@ struct PetView: View {
                 if let lastMessage = viewModel.messages.last(where: { !$0.isUser }) {
                     lastResponse = lastMessage.content
                     showBubble(text: lastResponse)
+                    
+                    // 添加到聊天历史
+                    let chatMessage = ChatMessage(content: lastMessage.content, isUser: false, agentName: viewModel.currentAgent.name, timestamp: Date())
+                    ChatHistoryWindowController.shared?.addMessage(chatMessage, for: viewModel.currentAgent.id)
+                    
                     AppLogger.success("显示气泡: \(lastResponse.prefix(50))...")
                 } else if let error = viewModel.errorMessage {
                     lastResponse = "❌ \(error)"
                     showBubble(text: lastResponse)
+                    
+                    // 添加错误消息到聊天历史
+                    let errorMessage = ChatMessage(content: lastResponse, isUser: false, agentName: viewModel.currentAgent.name, timestamp: Date())
+                    ChatHistoryWindowController.shared?.addMessage(errorMessage, for: viewModel.currentAgent.id)
+                    
                     AppLogger.error("显示错误: \(error)")
                 }
+                
+                // 添加用户消息到聊天历史
+                let userChatMessage = ChatMessage(content: message, isUser: true, agentName: nil, timestamp: Date())
+                ChatHistoryWindowController.shared?.addMessage(userChatMessage, for: viewModel.currentAgent.id)
             }
         }
     }

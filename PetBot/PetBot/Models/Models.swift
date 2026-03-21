@@ -162,3 +162,12 @@ extension Color {
         )
     }
 }
+
+// MARK: - Chat Message Model
+struct ChatMessage: Identifiable, Equatable {
+    let id = UUID()
+    let content: String
+    let isUser: Bool
+    let agentName: String?
+    let timestamp: Date
+}

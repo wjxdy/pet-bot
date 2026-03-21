@@ -163,6 +163,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(agentItem)
         
         menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "打开聊天历史", action: #selector(openChatHistory), keyEquivalent: "h"))
+        menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "打开设置", action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "退出", action: #selector(quit), keyEquivalent: "q"))
@@ -196,6 +198,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     // MARK: - Settings
+    @objc private func openChatHistory() {
+        if ChatHistoryWindowController.shared == nil {
+            let controller = ChatHistoryWindowController()
+            controller.setup(with: viewModel)
+        }
+        ChatHistoryWindowController.shared?.showWindow()
+    }
+    
     @objc private func openSettings() {
         // 使用静态共享实例避免被释放
         if SettingsWindowController.shared == nil {

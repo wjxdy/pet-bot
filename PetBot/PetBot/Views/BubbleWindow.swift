@@ -1,5 +1,5 @@
 // BubbleWindow.swift
-// 独立的气泡窗口 - 像素RPG风格
+// 独立的气泡窗口 - 像素RPG风格 + 流式输出支持
 
 import Cocoa
 
@@ -16,18 +16,23 @@ class BubbleWindowController: NSObject {
         window?.isVisible ?? false
     }
     
-    func show(text: String, anchorWindow: NSWindow?) {
+    func show(text: String, anchorWindow: NSWindow?, isStreaming: Bool = false) {
         self.anchorWindowRef = anchorWindow
         
         if window == nil {
             createWindow()
         }
         
-        // 更新文本
-        textView?.string = text.isEmpty ? "(等待回复...)" : text
+        if isStreaming && textView?.string != nil && textView?.string != "(等待回复...)" {
+            // 流式输出：追加文本
+            textView?.string = text
+        } else {
+            // 普通输出：直接设置文本
+            textView?.string = text.isEmpty ? "(等待回复...)" : text
+        }
         
         // 自适应高度
-        adjustWindowSize(for: text)
+        adjustWindowSize(for: textView?.string ?? "")
         
         // 位置计算
         positionNearAnchor(anchorWindow)
@@ -91,7 +96,7 @@ class BubbleWindowController: NSObject {
         
         window.isOpaque = false
         window.backgroundColor = .clear
-        window.hasShadow = false  // 像素风格不需要阴影
+        window.hasShadow = false
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.isMovableByWindowBackground = true
@@ -99,13 +104,12 @@ class BubbleWindowController: NSObject {
         // 创建像素风格背景
         let pixelView = PixelBubbleView(frame: NSRect(x: 0, y: 0, width: 280, height: 120))
         
-        // 创建文本视图 - 使用像素友好字体
+        // 创建文本视图
         let textView = NSTextView(frame: NSRect(x: 16, y: 16, width: 248, height: 88))
         textView.isEditable = false
         textView.isSelectable = true
         textView.backgroundColor = .clear
         textView.textColor = .black
-        // 使用等宽字体，更有像素感
         textView.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .medium)
         textView.autoresizingMask = [.width, .height]
         textView.textContainer?.lineFragmentPadding = 0
@@ -132,15 +136,23 @@ class BubbleWindowController: NSObject {
             options: [.usesLineFragmentOrigin, .usesFontLeading]
         )
         
-        // 计算所需高度（加上边距）
+        // 计算所需高度
         let minHeight: CGFloat = 80
-        let maxHeight: CGFloat = 200
-        let contentHeight = max(minHeight, min(maxHeight, textRect.height + 40))
+        let maxHeight: CGFloat = 400
+        let contentHeight = max(minHeight, min(maxHeight, textRect.height + 50))
         
-        // 更新窗口大小
-        var frame = window.frame
-        frame.size.height = contentHeight
-        window.setFrame(frame, display: true)
+        // 获取当前窗口位置
+        let currentFrame = window.frame
+        
+        // 更新窗口大小（保持底部位置不变，向上扩展）
+        let newFrame = NSRect(
+            x: currentFrame.origin.x,
+            y: currentFrame.origin.y + currentFrame.height - contentHeight,
+            width: 280,
+            height: contentHeight
+        )
+        
+        window.setFrame(newFrame, display: true, animate: true)
         
         // 更新文本视图大小
         textView.frame = NSRect(x: 16, y: 16, width: 248, height: contentHeight - 32)
@@ -169,7 +181,6 @@ class BubbleWindowController: NSObject {
         let bubbleWidth: CGFloat = 280
         let bubbleHeight = window.frame.height
         
-        // 默认显示在宠物上方
         var x = anchorFrame.midX - (bubbleWidth / 2) + offsetX
         var y = anchorFrame.maxY + 10 + offsetY
         
@@ -200,12 +211,11 @@ class PixelBubbleView: NSView {
         
         let bounds = self.bounds
         
-        // 像素风格配色 - 经典RPG对话框
-        let bgColor = CGColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 0.95)  // 纯白背景
-        let borderColor = CGColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 1.0)  // 黑色边框
-        let shadowColor = CGColor(red: 0.3, green: 0.3, blue: 0.3, alpha: 0.3)  // 轻微阴影
+        let bgColor = CGColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 0.95)
+        let borderColor = CGColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 1.0)
+        let shadowColor = CGColor(red: 0.3, green: 0.3, blue: 0.3, alpha: 0.3)
         
-        // 绘制像素化阴影（偏移2px）
+        // 绘制阴影
         context.setFillColor(shadowColor)
         drawPixelRect(context, rect: bounds.insetBy(dx: -2, dy: -2), cornerSize: 4)
         
@@ -213,12 +223,12 @@ class PixelBubbleView: NSView {
         context.setFillColor(bgColor)
         drawPixelRect(context, rect: bounds, cornerSize: 4)
         
-        // 绘制像素边框（2px粗）
+        // 绘制边框
         context.setStrokeColor(borderColor)
         context.setLineWidth(2)
         drawPixelBorder(context, rect: bounds.insetBy(dx: 1, dy: 1), cornerSize: 4)
         
-        // 绘制底部小三角（指向宠物）
+        // 绘制底部小三角
         drawPixelTriangle(context, at: CGPoint(x: bounds.midX, y: 0), size: 8, color: borderColor)
         
         // 填充三角形内部
@@ -232,45 +242,34 @@ class PixelBubbleView: NSView {
         context.fillPath()
     }
     
-    // 绘制像素化圆角矩形
     private func drawPixelRect(_ context: CGContext, rect: CGRect, cornerSize: CGFloat) {
         let path = CGMutablePath()
-        
-        // 使用阶梯式圆角（像素风格）
         let cs = cornerSize
         
-        // 从左上角开始
         path.move(to: CGPoint(x: rect.minX + cs, y: rect.maxY))
         path.addLine(to: CGPoint(x: rect.maxX - cs, y: rect.maxY))
-        // 右上角
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - cs))
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + cs))
-        // 右下角
         path.addLine(to: CGPoint(x: rect.maxX - cs, y: rect.minY))
         path.addLine(to: CGPoint(x: rect.minX + cs, y: rect.minY))
-        // 左下角
         path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + cs))
         path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - cs))
-        // 回到起点
         path.addLine(to: CGPoint(x: rect.minX + cs, y: rect.maxY))
         
         context.addPath(path)
         context.fillPath()
     }
     
-    // 绘制像素化边框
     private func drawPixelBorder(_ context: CGContext, rect: CGRect, cornerSize: CGFloat) {
         let path = CGMutablePath()
         let cs = cornerSize
         
-        // 外框路径（不包括底部三角形区域）
         path.move(to: CGPoint(x: rect.minX + cs, y: rect.maxY))
         path.addLine(to: CGPoint(x: rect.maxX - cs, y: rect.maxY))
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - cs))
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + cs))
         path.addLine(to: CGPoint(x: rect.maxX - cs, y: rect.minY))
         
-        // 底部边缘（留出三角形缺口）
         let triangleWidth: CGFloat = 16
         path.addLine(to: CGPoint(x: rect.midX + triangleWidth/2, y: rect.minY))
         path.move(to: CGPoint(x: rect.midX - triangleWidth/2, y: rect.minY))
@@ -284,7 +283,6 @@ class PixelBubbleView: NSView {
         context.strokePath()
     }
     
-    // 绘制像素三角形
     private func drawPixelTriangle(_ context: CGContext, at point: CGPoint, size: CGFloat, color: CGColor) {
         context.setStrokeColor(color)
         context.setLineWidth(2)

@@ -52,7 +52,7 @@ class AgentViewModel: ObservableObject {
         guard !trimmed.isEmpty else { return }
         
         // 添加用户消息
-        let userMessage = ChatMessage(content: trimmed, isUser: true, agentName: currentAgent.name)
+        let userMessage = ChatMessage(content: trimmed, isUser: true, agentName: currentAgent.name, timestamp: Date())
         await addMessage(userMessage)
         
         // 发送给 API
@@ -60,7 +60,7 @@ class AgentViewModel: ObservableObject {
         
         do {
             let response = try await apiService.sendMessage(trimmed, agentId: currentAgent.id)
-            let botMessage = ChatMessage(content: response, isUser: false, agentName: currentAgent.name)
+            let botMessage = ChatMessage(content: response, isUser: false, agentName: currentAgent.name, timestamp: Date())
             await addMessage(botMessage)
             AppLogger.success("收到响应，长度: \(response.count)")
         } catch {
@@ -94,13 +94,4 @@ class AgentViewModel: ObservableObject {
         errorMessage = message
         AppLogger.error(message)
     }
-}
-
-// MARK: - Chat Message Model
-struct ChatMessage: Identifiable, Equatable {
-    let id = UUID()
-    let content: String
-    let isUser: Bool
-    let agentName: String
-    let timestamp = Date()
 }

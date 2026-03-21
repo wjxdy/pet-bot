@@ -53,6 +53,13 @@ actor OpenClawAPIService: APIServiceProtocol {
             "--timeout", "30"
         ]
         
+        // 关键：设置正确的环境变量
+        var env = ProcessInfo.processInfo.environment
+        // 添加 NVM 和 Node 路径
+        env["PATH"] = "/Users/xulei/.nvm/versions/node/v22.17.0/bin:/usr/local/bin:/usr/bin:/bin"
+        env["NVM_DIR"] = "/Users/xulei/.nvm"
+        process.environment = env
+        
         let pipe = Pipe()
         let errorPipe = Pipe()
         process.standardOutput = pipe

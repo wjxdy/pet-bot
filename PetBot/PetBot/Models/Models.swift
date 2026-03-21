@@ -26,30 +26,57 @@ extension Agent {
         icon: "🐭"
     )
     
-    static let all: [Agent] = [
-        .default,
-        Agent(
-            id: "shennong",
-            name: "神农",
-            description: "AI 功能实验师",
-            colorHex: "#FF6B35",
-            icon: "🌿"
-        ),
-        Agent(
-            id: "main",
-            name: "主助手",
-            description: "通用 AI 助手",
-            colorHex: "#007AFF",
-            icon: "🤖"
-        ),
-        Agent(
-            id: "claude",
-            name: "Claude",
-            description: "Anthropic Claude",
-            colorHex: "#8E44AD",
-            icon: "🧠"
-        )
-    ]
+    static let all: [Agent] = loadAgentsFromConfig()
+    
+    // 从本地 .openclaw 配置读取 agent 列表
+    private static func loadAgentsFromConfig() -> [Agent] {
+        let configPath = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".openclaw/agents/shennong/workspace/AGENTS.md")
+        
+        // 如果配置文件存在，尝试读取
+        if FileManager.default.fileExists(atPath: configPath.path) {
+            // 这里可以添加解析逻辑
+            // 暂时返回默认列表
+        }
+        
+        // 扫描 .openclaw/agents 目录
+        let agentsDir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".openclaw/agents")
+        
+        var agents: [Agent] = []
+        
+        if let contents = try? FileManager.default.contentsOfDirectory(
+            at: agentsDir,
+            includingPropertiesForKeys: nil,
+            options: .skipsHiddenFiles
+        ) {
+            for item in contents {
+                let agentId = item.lastPathComponent
+                // 排除非 agent 目录
+                if !agentId.hasPrefix(".") && agentId != "shennong" {
+                    agents.append(Agent(
+                        id: agentId,
+                        name: agentId.capitalized,
+                        description: "OpenClaw Agent",
+                        colorHex: "#007AFF",
+                        icon: "🤖"
+                    ))
+                }
+            }
+        }
+        
+        // 确保至少有默认 agent
+        if agents.isEmpty {
+            agents = [
+                .default,
+                Agent(id: "shennong", name: "神农", description: "AI 功能实验师", colorHex: "#FF6B35", icon: "🌿"),
+                Agent(id: "main", name: "主助手", description: "通用 AI 助手", colorHex: "#007AFF", icon: "🤖"),
+                Agent(id: "claude", name: "Claude", description: "Anthropic Claude", colorHex: "#8E44AD", icon: "🧠")
+            ]
+        }
+        
+        return agents
+    }
 }
 
 // MARK: - Color Extension

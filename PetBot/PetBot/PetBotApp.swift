@@ -2,6 +2,7 @@
 // 应用入口
 
 import SwiftUI
+import AppKit
 
 @main
 struct PetBotApp: App {
@@ -18,34 +19,29 @@ struct PetBotApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate {
     var petWindow: PetWindow?
     var statusItem: NSStatusItem?
-    var agentManager = AgentManager()
+    let viewModel = AgentViewModel()
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // 创建宠物窗口
-        createPetWindow()
+        AppLogger.info("PetBot 启动中...")
         
-        // 创建状态栏图标
-        createStatusBarItem()
+        setupPetWindow()
+        setupStatusBar()
+        setupHotkey()
         
-        // 注册全局快捷键
-        HotkeyManager.shared.registerHotkey()
-        HotkeyManager.shared.onHotkeyPressed = { [weak self] in
-            self?.toggleInput()
-        }
-        
-        // 隐藏 Dock 图标
         NSApp.setActivationPolicy(.accessory)
-        
-        // 启动时只显示宠物
-        // 按 Option+Space 唤出输入框（独立窗口，位置可记忆）
+        AppLogger.success("PetBot 启动完成")
     }
     
-    func createPetWindow() {
-        let contentView = PetView(agentManager: agentManager)
-            .environmentObject(agentManager)
+    func applicationWillTerminate(_ notification: Notification) {
+        AppLogger.info("PetBot 正在关闭...")
+        InputWindowController.shared.close()
+    }
+    
+    private func setupPetWindow() {
+        let contentView = PetView()
         
         petWindow = PetWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 360, height: 440),
+            contentRect: NSRect(origin: .zero, size: AppConfiguration.petWindowSize),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
@@ -55,7 +51,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         petWindow?.makeKeyAndOrderFront(nil)
     }
     
-    func createStatusBarItem() {
+    private func setupStatusBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem?.button {
@@ -68,14 +64,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Agent 切换菜单
         let agentMenu = NSMenu(title: "切换 Agent")
-        for agent in agentManager.availableAgents {
-            let item = NSMenuItem(
-                title: agent.name,
-                action: #selector(switchAgent(_:)),
-                keyEquivalent: ""
-            )
+        for agent in viewModel.availableAgents {
+            let item = NSMenuItem(title: agent.name, action: #selector(switchAgent(_:)), keyEquivalent: "")
             item.representedObject = agent.id
-            item.state = agent.id == agentManager.currentAgent.id ? .on : .off
+            item.state = agent.id == viewModel.currentAgent.id ? .on : .off
             agentMenu.addItem(item)
         }
         
@@ -89,24 +81,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem?.menu = menu
     }
     
-    @objc func toggleInput() {
-        // 切换输入框窗口
-        NotificationCenter.default.post(name: .toggleChat, object: nil)
-    }
-    
-    @objc func switchAgent(_ sender: NSMenuItem) {
-        if let agentId = sender.representedObject as? String {
-            agentManager.switchToAgent(agentId)
+    private func setupHotkey() {
+        HotkeyManager.shared.register()
+        HotkeyManager.shared.onHotkeyPressed = { [weak self] in
+            self?.toggleInput()
         }
     }
     
-    @objc func quit() {
-        // 关闭输入框窗口
+    @objc private func toggleInput() {
+        NotificationCenter.default.post(name: Notification.Name("toggleInput"), object: nil)
+    }
+    
+    @objc private func switchAgent(_ sender: NSMenuItem) {
+        guard let agentId = sender.representedObject as? String,
+              let agent = viewModel.availableAgents.first(where: { $0.id == agentId }) else { return }
+        
+        viewModel.switchAgent(agent)
+        
+        if let menu = statusItem?.menu?.item(withTitle: "切换 Agent")?.submenu {
+            for item in menu.items {
+                item.state = (item.representedObject as? String) == agentId ? .on : .off
+            }
+        }
+    }
+    
+    @objc private func quit() {
         InputWindowController.shared.close()
         NSApp.terminate(nil)
     }
-}
-
-extension Notification.Name {
-    static let toggleChat = Notification.Name("toggleChat")
 }

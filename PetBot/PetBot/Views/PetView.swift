@@ -1,162 +1,153 @@
 // PetView.swift
-// 宠物主视图 - 名字在图片上方
+// 宠物主视图
 
 import SwiftUI
 
 struct PetView: View {
-    @ObservedObject var agentManager: AgentManager
-    @State private var showResponseBubble = false
-    @State private var currentResponseText = ""
+    @StateObject private var viewModel = AgentViewModel()
+    @State private var showInputWindow = false
+    @State private var showBubble = false
+    @State private var lastResponse: String = ""
     
     var body: some View {
         ZStack {
-            // 宠物和名字 - 底部居中，图片在上，名字在下
-            VStack(spacing: 8) {
-                Spacer() // 上方留白，把宠物推到底部
-                
-                // === 图片在上 ===
-                PetImage()
-                    .frame(width: 130, height: 130)
-                
-                // === 名字在下（透明背景+阴影）===
-                Text(agentManager.currentAgent.name)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
-                    .shadow(color: .black.opacity(0.8), radius: 2, x: 0, y: 1)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .padding(.bottom, 20)
-            }
+            // 宠物主体
+            petContent
             
-            // 回复气泡 - 显示在宠物右上方
-            if showResponseBubble && !currentResponseText.isEmpty {
-                DialogBubble(
-                    text: currentResponseText,
-                    onClose: {
-                        withAnimation {
-                            showResponseBubble = false
-                        }
-                    }
+            // 对话气泡
+            if showBubble, !lastResponse.isEmpty {
+                BubbleView(
+                    text: lastResponse,
+                    onClose: { showBubble = false }
                 )
-                .position(x: 260, y: 200) // 宠物右上方位置
+                .position(x: 260, y: 200)
+                .transition(.scale.combined(with: .opacity))
             }
         }
-        .frame(width: 360, height: 400)
-        .onReceive(NotificationCenter.default.publisher(for: .toggleChat)) { _ in
+        .frame(width: AppConfiguration.petWindowSize.width, 
+               height: AppConfiguration.petWindowSize.height)
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("toggleInput"))) { _ in
             toggleInput()
         }
     }
     
+    // MARK: - Subviews
+    private var petContent: some View {
+        VStack(spacing: 8) {
+            Spacer()
+            
+            PetImageView(imagePath: AppConfiguration.petImagePath)
+                .frame(width: 130, height: 130)
+            
+            AgentNameLabel(name: viewModel.currentAgent.name)
+        }
+    }
+    
+    // MARK: - Actions
     private func toggleInput() {
-        if showResponseBubble {
-            withAnimation { showResponseBubble = false }
+        if showBubble {
+            withAnimation { showBubble = false }
         }
         
         if InputWindowController.shared.isVisible {
             InputWindowController.shared.hide()
         } else {
-            InputWindowController.shared.show(agentManager: agentManager) { msg in
-                send(msg)
+            InputWindowController.shared.show(viewModel: viewModel) { message in
+                handleMessage(message)
             }
         }
     }
     
-    private func send(_ message: String) {
+    private func handleMessage(_ message: String) {
         Task {
-            await agentManager.sendMessage(message)
-            await MainActor.run {
-                if let resp = agentManager.currentResponse {
-                    currentResponseText = resp
-                    agentManager.currentResponse = nil
-                    withAnimation { showResponseBubble = true }
+            await viewModel.sendMessage(message)
+            
+            // 显示最后一个非用户消息
+            if let lastMessage = viewModel.messages.last(where: { !$0.isUser }) {
+                await MainActor.run {
+                    lastResponse = lastMessage.content
+                    withAnimation {
+                        showBubble = true
+                    }
                 }
             }
         }
     }
 }
 
-// 宠物图片
-struct PetImage: View {
-    private let path = "/Users/xulei/Desktop/new_a.png"
+// MARK: - Subviews
+struct PetImageView: View {
+    let imagePath: String
     
     var body: some View {
-        if let img = NSImage(contentsOfFile: path) {
+        if let img = NSImage(contentsOfFile: imagePath) {
             Image(nsImage: img)
                 .resizable()
                 .scaledToFit()
                 .shadow(radius: 8, x: 0, y: 4)
         } else {
-            Image(systemName: "photo")
+            Image(systemName: "cat.fill")
                 .resizable()
                 .scaledToFit()
-                .foregroundColor(.gray)
+                .foregroundColor(.orange)
         }
     }
 }
 
-// 对话气泡 - 像素风格
-struct DialogBubble: View {
+struct AgentNameLabel: View {
+    let name: String
+    
+    var body: some View {
+        Text(name)
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundColor(.white)
+            .shadow(color: .black.opacity(0.8), radius: 2, x: 0, y: 1)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+            .padding(.bottom, 20)
+    }
+}
+
+// MARK: - Bubble View
+struct BubbleView: View {
     let text: String
     let onClose: () -> Void
     
     var body: some View {
         VStack(alignment: .trailing, spacing: 6) {
-            // 关闭按钮
             Button(action: onClose) {
                 Image(systemName: "xmark")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(.black)
             }
             .buttonStyle(PlainButtonStyle())
-            .padding(.trailing, 6)
             
-            // 消息文本
             Text(text)
                 .font(.system(size: 14))
                 .foregroundColor(.black)
                 .lineSpacing(4)
-                .frame(maxWidth: 220, alignment: .leading)
+                .frame(maxWidth: AppConfiguration.bubbleMaxWidth, alignment: .leading)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(
-            ZStack {
-                // 阴影层（右下偏移）
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.black.opacity(0.2))
-                    .offset(x: 3, y: 3)
-                
-                // 主背景（白色）
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.white)
-                
-                // 黑色边框
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.black, lineWidth: 2.5)
-            }
-        )
-        .frame(width: 260)
-        // 小尾巴指向宠物
-        .overlay(
-            Triangle()
-                .fill(Color.white)
-                .stroke(Color.black, lineWidth: 2.5)
-                .frame(width: 16, height: 10)
-                .rotationEffect(.degrees(180))
-                .offset(x: -60, y: 48),
-            alignment: .bottom
-        )
+        .background(bubbleBackground)
+        .frame(width: AppConfiguration.bubbleMaxWidth + 40)
     }
-}
-
-// 三角形形状（用于气泡尾巴）
-struct Triangle: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-        path.closeSubpath()
-        return path
+    
+    private var bubbleBackground: some View {
+        ZStack {
+            // 阴影
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.black.opacity(0.2))
+                .offset(x: 3, y: 3)
+            
+            // 背景
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.white)
+            
+            // 边框
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.black, lineWidth: 2.5)
+        }
     }
 }

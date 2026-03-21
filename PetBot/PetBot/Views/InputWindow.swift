@@ -1,23 +1,28 @@
 // InputWindow.swift
-// 简化版 - 使用标准窗口样式测试输入
+// 输入窗口控制器
 
 import SwiftUI
 import AppKit
 
-// SwiftUI 输入视图
-struct InputView: View {
+// MARK: - SwiftUI Input View
+struct ModernInputView: View {
     @State private var text = ""
-    var onSend: (String) -> Void
-    var agentName: String
+    let viewModel: AgentViewModel
+    let onSend: (String) -> Void
+    let onDismiss: () -> Void
     
     var body: some View {
         VStack(spacing: 0) {
             // 标题栏
             HStack {
-                Text(agentName)
+                Text(viewModel.currentAgent.name)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.primary)
                 Spacer()
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12))
+                }
+                .buttonStyle(PlainButtonStyle())
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -45,7 +50,7 @@ struct InputView: View {
             }
             .padding(12)
         }
-        .frame(width: 300)
+        .frame(width: AppConfiguration.inputWindowSize.width)
     }
     
     private func send() {
@@ -56,38 +61,36 @@ struct InputView: View {
     }
 }
 
+// MARK: - Window Controller
 @MainActor
 class InputWindowController: NSObject {
     static let shared = InputWindowController()
     
     private var window: NSWindow?
-    private var hostingController: NSHostingController<InputView>?
-    private var agentManager: AgentManager?
+    private var hostingController: NSHostingController<ModernInputView>?
+    private weak var viewModel: AgentViewModel?
     private var onSendCallback: ((String) -> Void)?
     
-    private let positionKey = "inputWindowPositionV8"
+    private let positionKey = "inputWindowPosition"
     
     var isVisible: Bool {
-        return window?.isVisible ?? false
+        window?.isVisible ?? false
     }
     
-    func show(agentManager: AgentManager, onSend: @escaping (String) -> Void) {
-        self.agentManager = agentManager
+    func show(viewModel: AgentViewModel, onSend: @escaping (String) -> Void) {
+        self.viewModel = viewModel
         self.onSendCallback = onSend
         
         if window == nil {
             createWindow()
         } else {
-            updateHostingController()
+            updateContent()
         }
         
         restorePosition()
         
-        guard let window = window else { return }
-        
-        // 激活并显示
         NSApp.activate(ignoringOtherApps: true)
-        window.makeKeyAndOrderFront(nil)
+        window?.makeKeyAndOrderFront(nil)
     }
     
     func hide() {
@@ -103,28 +106,30 @@ class InputWindowController: NSObject {
     }
     
     private func createWindow() {
-        // 创建 SwiftUI 视图
-        let inputView = InputView(
+        guard let viewModel = viewModel, let onSend = onSendCallback else { return }
+        
+        let inputView = ModernInputView(
+            viewModel: viewModel,
             onSend: { [weak self] text in
                 self?.onSendCallback?(text)
                 self?.hide()
             },
-            agentName: agentManager?.currentAgent.name ?? "Agent"
+            onDismiss: { [weak self] in
+                self?.hide()
+            }
         )
         
-        // 创建 hosting controller
         let hostingController = NSHostingController(rootView: inputView)
         self.hostingController = hostingController
         
-        // 创建窗口 - 使用标准窗口样式（带标题栏）
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 300, height: 100),
-            styleMask: [.titled, .closable, .miniaturizable],
+            contentRect: NSRect(origin: .zero, size: AppConfiguration.inputWindowSize),
+            styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
         
-        window.title = "PetBot 输入"
+        window.title = "PetBot"
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces]
         window.contentViewController = hostingController
@@ -133,42 +138,40 @@ class InputWindowController: NSObject {
         self.window = window
     }
     
-    private func updateHostingController() {
-        let inputView = InputView(
+    private func updateContent() {
+        guard let viewModel = viewModel, let onSend = onSendCallback else { return }
+        
+        let inputView = ModernInputView(
+            viewModel: viewModel,
             onSend: { [weak self] text in
                 self?.onSendCallback?(text)
                 self?.hide()
             },
-            agentName: agentManager?.currentAgent.name ?? "Agent"
+            onDismiss: { [weak self] in
+                self?.hide()
+            }
         )
+        
         hostingController?.rootView = inputView
     }
     
     private func savePosition() {
-        guard let win = window else { return }
-        let frame = win.frame
+        guard let frame = window?.frame else { return }
         UserDefaults.standard.set(["x": frame.origin.x, "y": frame.origin.y], forKey: positionKey)
     }
     
     private func restorePosition() {
-        guard let win = window else { return }
+        guard let window = window else { return }
         
         let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        let defaultX = screen.midX - 150
-        let defaultY = screen.midY - 50
+        let defaultX = screen.midX - AppConfiguration.inputWindowSize.width / 2
+        let defaultY = screen.midY - AppConfiguration.inputWindowSize.height / 2
         
         if let pos = UserDefaults.standard.dictionary(forKey: positionKey) as? [String: Double],
            let x = pos["x"], let y = pos["y"] {
-            win.setFrameOrigin(NSPoint(x: x, y: y))
+            window.setFrameOrigin(NSPoint(x: x, y: y))
         } else {
-            win.setFrameOrigin(NSPoint(x: defaultX, y: defaultY))
+            window.setFrameOrigin(NSPoint(x: defaultX, y: defaultY))
         }
     }
-}
-
-// Pet 窗口控制器
-@MainActor
-class PetWindowController: NSObject {
-    static let shared = PetWindowController()
-    weak var petWindow: NSWindow?
 }

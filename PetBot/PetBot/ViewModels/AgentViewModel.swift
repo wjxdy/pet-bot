@@ -6,6 +6,8 @@ import Combine
 
 @MainActor
 class AgentViewModel: ObservableObject {
+    // MARK: - Shared Instance
+    static let shared = AgentViewModel()
     // MARK: - Published Properties
     @Published var currentAgent: Agent
     @Published var availableAgents: [Agent] = []

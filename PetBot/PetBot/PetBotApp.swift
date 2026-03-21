@@ -18,9 +18,8 @@ struct PetBotApp: App {
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     var petWindow: PetWindow?
-    var settingsWindow: NSWindow?
     var statusItem: NSStatusItem?
-    let viewModel = AgentViewModel()
+    let viewModel = AgentViewModel.shared
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppLogger.info("PetBot 启动中...")
@@ -198,27 +197,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Settings
     @objc private func openSettings() {
-        if settingsWindow == nil {
-            let settingsView = SettingsView(agentViewModel: viewModel)
-            let hostingView = NSHostingView(rootView: settingsView)
-            hostingView.frame = NSRect(x: 0, y: 0, width: 450, height: 500)
-
-            let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 450, height: 500),
-                styleMask: [.titled, .closable, .miniaturizable],
-                backing: .buffered,
-                defer: false
-            )
-            window.title = "PetBot 设置"
-            window.contentView = hostingView
-            window.isReleasedWhenClosed = false
-            window.center()
-
-            settingsWindow = window
-        }
-
-        settingsWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        SettingsWindowController.shared.setup(with: viewModel)
+        SettingsWindowController.shared.showSettings()
     }
     
     // MARK: - Quit

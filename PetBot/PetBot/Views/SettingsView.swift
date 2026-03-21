@@ -1,103 +1,209 @@
 // SettingsView.swift
-// 设置视图 - 修复版
+// 设置窗口 - 原生 AppKit 实现
 
-import SwiftUI
+import Cocoa
 
-struct SettingsView: View {
-    @ObservedObject var agentViewModel: AgentViewModel
-    @Environment(\.dismiss) var dismiss
+class SettingsWindowController: NSWindowController {
+    static let shared = SettingsWindowController()
     
-    @State private var autoHideTime: Double = 10
-    @State private var offsetX: Double = 0
-    @State private var offsetY: Double = 5
+    private var viewModel: AgentViewModel!
     
-    var body: some View {
-        VStack(spacing: 0) {
-            // 标题
-            Text("PetBot 设置")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .padding()
-            
-            Divider()
-            
-            // 内容
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    GroupBox("气泡设置") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("自动消失时间")
-                                    .font(.subheadline)
-                                Picker("", selection: $autoHideTime) {
-                                    Text("5秒").tag(5.0)
-                                    Text("10秒").tag(10.0)
-                                    Text("15秒").tag(15.0)
-                                    Text("30秒").tag(30.0)
-                                    Text("永不").tag(-1.0)
-                                }
-                                .pickerStyle(SegmentedPickerStyle())
-                                .labelsHidden()
-                            }
-
-                            HStack {
-                                Text("X 偏移")
-                                Spacer()
-                                Text("\(Int(offsetX))")
-                                    .frame(width: 30, alignment: .trailing)
-                                Slider(value: $offsetX, in: -100...100, step: 1)
-                                    .frame(width: 150)
-                            }
-
-                            HStack {
-                                Text("Y 偏移")
-                                Spacer()
-                                Text("\(Int(offsetY))")
-                                    .frame(width: 30, alignment: .trailing)
-                                Slider(value: $offsetY, in: -50...100, step: 1)
-                                    .frame(width: 150)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-
-                    GroupBox("Agent 选择") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            if agentViewModel.availableAgents.isEmpty {
-                                Text("加载中...")
-                                    .foregroundColor(.gray)
-                            } else {
-                                ForEach(agentViewModel.availableAgents) { agent in
-                                    Button(action: {
-                                        agentViewModel.switchAgent(agent)
-                                    }) {
-                                        HStack {
-                                            Text("\(agent.icon) \(agent.name)")
-                                            Spacer()
-                                            if agent.id == agentViewModel.currentAgent.id {
-                                                Image(systemName: "checkmark")
-                                                    .foregroundColor(.blue)
-                                            }
-                                        }
-                                        .contentShape(Rectangle())
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                }
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
-                .padding()
-            }
-            
-            Spacer()
-            
-            Button("完成") {
-                dismiss()
-            }
-            .padding()
+    // UI 控件
+    private var autoHideTimePopUp: NSPopUpButton!
+    private var offsetXSlider: NSSlider!
+    private var offsetYSlider: NSSlider!
+    private var offsetXLabel: NSTextField!
+    private var offsetYLabel: NSTextField!
+    private var agentButtons: [NSButton] = []
+    
+    // 初始化
+    func setup(with viewModel: AgentViewModel) {
+        self.viewModel = viewModel
+        
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 500),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "PetBot 设置"
+        window.isReleasedWhenClosed = false
+        window.center()
+        
+        self.window = window
+        setupUI()
+        loadSettings()
+    }
+    
+    private func setupUI() {
+        guard let contentView = window?.contentView else { return }
+        
+        let scrollView = NSScrollView(frame: contentView.bounds)
+        scrollView.autoresizingMask = [.width, .height]
+        scrollView.hasVerticalScroller = true
+        contentView.addSubview(scrollView)
+        
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 480, height: 600))
+        scrollView.documentView = container
+        
+        var y: CGFloat = 550
+        
+        // 标题
+        let title = NSTextField(labelWithString: "PetBot 设置")
+        title.font = NSFont.systemFont(ofSize: 20, weight: .semibold)
+        title.sizeToFit()
+        title.frame.origin = CGPoint(x: 20, y: y)
+        container.addSubview(title)
+        
+        y -= 60
+        
+        // 气泡设置
+        let bubbleLabel = NSTextField(labelWithString: "气泡设置")
+        bubbleLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
+        bubbleLabel.textColor = .secondaryLabelColor
+        bubbleLabel.sizeToFit()
+        bubbleLabel.frame.origin = CGPoint(x: 20, y: y)
+        container.addSubview(bubbleLabel)
+        
+        y -= 40
+        
+        // 自动消失时间
+        let timeLabel = NSTextField(labelWithString: "自动消失时间:")
+        timeLabel.sizeToFit()
+        timeLabel.frame.origin = CGPoint(x: 40, y: y)
+        container.addSubview(timeLabel)
+        
+        autoHideTimePopUp = NSPopUpButton(frame: NSRect(x: 160, y: y, width: 150, height: 25))
+        autoHideTimePopUp.addItems(withTitles: ["5秒", "10秒", "15秒", "30秒", "永不"])
+        autoHideTimePopUp.target = self
+        autoHideTimePopUp.action = #selector(timeChanged(_:))
+        container.addSubview(autoHideTimePopUp)
+        
+        y -= 45
+        
+        // X 偏移
+        let xLabel = NSTextField(labelWithString: "X 偏移:")
+        xLabel.sizeToFit()
+        xLabel.frame.origin = CGPoint(x: 40, y: y)
+        container.addSubview(xLabel)
+        
+        offsetXLabel = NSTextField(labelWithString: "0")
+        offsetXLabel.frame = NSRect(x: 100, y: y, width: 30, height: 20)
+        container.addSubview(offsetXLabel)
+        
+        offsetXSlider = NSSlider(frame: NSRect(x: 140, y: y, width: 250, height: 20))
+        offsetXSlider.minValue = -100
+        offsetXSlider.maxValue = 100
+        offsetXSlider.target = self
+        offsetXSlider.action = #selector(xChanged(_:))
+        container.addSubview(offsetXSlider)
+        
+        y -= 45
+        
+        // Y 偏移
+        let yLabel = NSTextField(labelWithString: "Y 偏移:")
+        yLabel.sizeToFit()
+        yLabel.frame.origin = CGPoint(x: 40, y: y)
+        container.addSubview(yLabel)
+        
+        offsetYLabel = NSTextField(labelWithString: "0")
+        offsetYLabel.frame = NSRect(x: 100, y: y, width: 30, height: 20)
+        container.addSubview(offsetYLabel)
+        
+        offsetYSlider = NSSlider(frame: NSRect(x: 140, y: y, width: 250, height: 20))
+        offsetYSlider.minValue = -50
+        offsetYSlider.maxValue = 100
+        offsetYSlider.target = self
+        offsetYSlider.action = #selector(yChanged(_:))
+        container.addSubview(offsetYSlider)
+        
+        y -= 60
+        
+        // Agent 选择
+        let agentLabel = NSTextField(labelWithString: "Agent 选择")
+        agentLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
+        agentLabel.textColor = .secondaryLabelColor
+        agentLabel.sizeToFit()
+        agentLabel.frame.origin = CGPoint(x: 20, y: y)
+        container.addSubview(agentLabel)
+        
+        y -= 40
+        
+        // Agent 按钮
+        for (index, agent) in viewModel.availableAgents.enumerated() {
+            let button = NSButton(frame: NSRect(x: 40, y: y, width: 400, height: 24))
+            button.title = "\(agent.icon) \(agent.name)"
+            button.setButtonType(.radio)
+            button.target = self
+            button.action = #selector(agentChanged(_:))
+            button.tag = index
+            button.state = agent.id == viewModel.currentAgent.id ? .on : .off
+            container.addSubview(button)
+            agentButtons.append(button)
+            y -= 30
         }
-        .frame(minWidth: 450, minHeight: 500)
+        
+        // 完成按钮
+        let doneButton = NSButton(frame: NSRect(x: 380, y: 20, width: 80, height: 28))
+        doneButton.title = "完成"
+        doneButton.bezelStyle = .rounded
+        doneButton.keyEquivalent = "\r"
+        doneButton.target = self
+        doneButton.action = #selector(close)
+        container.addSubview(doneButton)
+    }
+    
+    private func loadSettings() {
+        let times: [Double] = [5, 10, 15, 30, -1]
+        let current = UserDefaults.standard.double(forKey: "bubbleAutoHideSeconds")
+        if let index = times.firstIndex(of: current) {
+            autoHideTimePopUp.selectItem(at: index)
+        } else {
+            autoHideTimePopUp.selectItem(at: 1) // 默认 10秒
+        }
+        
+        let x = UserDefaults.standard.double(forKey: "bubbleOffsetX")
+        let y = UserDefaults.standard.double(forKey: "bubbleOffsetY")
+        offsetXSlider.doubleValue = x
+        offsetYSlider.doubleValue = y
+        offsetXLabel.stringValue = "\(Int(x))"
+        offsetYLabel.stringValue = "\(Int(y))"
+    }
+    
+    @objc private func timeChanged(_ sender: NSPopUpButton) {
+        let times: [Double] = [5, 10, 15, 30, -1]
+        UserDefaults.standard.set(times[sender.indexOfSelectedItem], forKey: "bubbleAutoHideSeconds")
+    }
+    
+    @objc private func xChanged(_ sender: NSSlider) {
+        let v = Int(sender.doubleValue)
+        offsetXLabel.stringValue = "\(v)"
+        UserDefaults.standard.set(sender.doubleValue, forKey: "bubbleOffsetX")
+    }
+    
+    @objc private func yChanged(_ sender: NSSlider) {
+        let v = Int(sender.doubleValue)
+        offsetYLabel.stringValue = "\(v)"
+        UserDefaults.standard.set(sender.doubleValue, forKey: "bubbleOffsetY")
+    }
+    
+    @objc private func agentChanged(_ sender: NSButton) {
+        let agents = viewModel.availableAgents
+        guard sender.tag >= 0 && sender.tag < agents.count else { return }
+        
+        viewModel.switchAgent(agents[sender.tag])
+        
+        // 更新其他按钮
+        for (i, btn) in agentButtons.enumerated() {
+            btn.state = (i == sender.tag) ? .on : .off
+        }
+    }
+    
+    func showSettings() {
+        if window == nil {
+            setup(with: viewModel ?? AgentViewModel())
+        }
+        window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 }

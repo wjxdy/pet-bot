@@ -10,6 +10,7 @@ class BubbleWindowController: NSObject {
     
     private var window: NSPanel?
     private var hostingController: NSHostingController<BubbleView>?
+    private var isPositioned = false // 标记是否已设置过初始位置
     
     var isVisible: Bool {
         window?.isVisible ?? false
@@ -19,13 +20,17 @@ class BubbleWindowController: NSObject {
         // 如果窗口不存在则创建
         if window == nil {
             createWindow()
+            isPositioned = false
         }
         
         // 更新内容
         updateContent(text: text)
         
-        // 定位到宠物窗口的左上方
-        positionWindow(anchorWindow: anchorWindow)
+        // 只在第一次显示时定位到宠物窗口
+        if !isPositioned {
+            positionWindow(anchorWindow: anchorWindow)
+            isPositioned = true
+        }
         
         // 显示窗口
         window?.makeKeyAndOrderFront(nil)
@@ -39,6 +44,11 @@ class BubbleWindowController: NSObject {
         window?.close()
         window = nil
         hostingController = nil
+        isPositioned = false
+    }
+    
+    func resetPosition() {
+        isPositioned = false
     }
     
     private func createWindow() {

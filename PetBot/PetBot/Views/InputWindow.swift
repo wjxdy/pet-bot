@@ -1,56 +1,96 @@
 // InputWindow.swift
-// 输入窗口控制器 - 可拖动带阴影
+// 输入窗口 - 确保可输入
 
 import SwiftUI
 import AppKit
 
-struct DraggableInputView: View {
-    @State private var text: String = ""
+struct InputContainerView: View {
     let onSend: (String) -> Void
     
     var body: some View {
-        HStack(spacing: 12) {
-            TextField("输入消息...", text: $text)
-                .textFieldStyle(PlainTextFieldStyle())
-                .font(.system(size: 16))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color.white)
-                .cornerRadius(8)
-                .onSubmit {
-                    submit()
-                }
+        InputFieldRepresentable(onSend: onSend)
+            .padding(16)
+            .background(Color.white)
+            .cornerRadius(12)
+            .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 5)
+            .frame(width: 400, height: 70)
+    }
+}
+
+// 使用 NSRepresentable 确保原生输入
+struct InputFieldRepresentable: NSViewRepresentable {
+    let onSend: (String) -> Void
+    
+    func makeNSView(context: Context) -> NSView {
+        let container = NSView()
+        
+        // 创建 NSTextField
+        let textField = NSTextField()
+        textField.placeholderString = "输入消息..."
+        textField.font = NSFont.systemFont(ofSize: 14)
+        textField.isEditable = true
+        textField.isSelectable = true
+        textField.focusRingType = .default
+        textField.bezelStyle = .roundedBezel
+        textField.target = context.coordinator
+        textField.action = #selector(Coordinator.submit)
+        
+        // 创建发送按钮
+        let button = NSButton(title: "发送", target: context.coordinator, action: #selector(Coordinator.submit))
+        button.bezelStyle = .rounded
+        button.keyEquivalent = "\r" // 回车键
+        
+        // 布局
+        textField.translatesAutoresizingMaskIntoConstraints = false
+        button.translatesAutoresizingMaskIntoConstraints = false
+        
+        container.addSubview(textField)
+        container.addSubview(button)
+        
+        NSLayoutConstraint.activate([
+            textField.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            textField.topAnchor.constraint(equalTo: container.topAnchor),
+            textField.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            textField.trailingAnchor.constraint(equalTo: button.leadingAnchor, constant: -8),
             
-            Button(action: submit) {
-                Text("发送")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(text.isEmpty ? Color.gray : Color.blue)
-                    .cornerRadius(8)
-            }
-            .buttonStyle(PlainButtonStyle())
-            .disabled(text.isEmpty)
+            button.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            button.topAnchor.constraint(equalTo: container.topAnchor),
+            button.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            button.widthAnchor.constraint(equalToConstant: 60)
+        ])
+        
+        context.coordinator.textField = textField
+        context.coordinator.onSend = onSend
+        
+        // 延迟设置焦点
+        DispatchQueue.main.async {
+            textField.window?.makeFirstResponder(textField)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(NSColor.windowBackgroundColor))
-                .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
-        )
+        
+        return container
     }
     
-    private func submit() {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        onSend(trimmed)
-        text = ""
+    func updateNSView(_ nsView: NSView, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
+    class Coordinator: NSObject {
+        weak var textField: NSTextField?
+        var onSend: ((String) -> Void)?
+        
+        @objc func submit() {
+            guard let text = textField?.stringValue.trimmingCharacters(in: .whitespaces),
+                  !text.isEmpty else { return }
+            onSend?(text)
+            textField?.stringValue = ""
+        }
     }
 }
 
 @MainActor
-class InputWindowController: NSObject, NSWindowDelegate {
+class InputWindowController: NSObject {
     static let shared = InputWindowController()
     
     private var window: NSPanel?
@@ -67,7 +107,6 @@ class InputWindowController: NSObject, NSWindowDelegate {
             createWindow()
         }
         
-        // 激活并显示
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
     }
@@ -82,17 +121,16 @@ class InputWindowController: NSObject, NSWindowDelegate {
     }
     
     private func createWindow() {
-        let contentView = DraggableInputView { [weak self] text in
+        let contentView = InputContainerView { [weak self] text in
             self?.onSendCallback?(text)
             self?.hide()
         }
         
         let hostingController = NSHostingController(rootView: contentView)
         
-        // 使用 NSPanel 无边框但可拖动
         let window = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 80),
-            styleMask: [.borderless, .nonactivatingPanel],
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 70),
+            styleMask: [.borderless],
             backing: .buffered,
             defer: false
         )
@@ -100,12 +138,11 @@ class InputWindowController: NSObject, NSWindowDelegate {
         window.contentView = hostingController.view
         window.isOpaque = false
         window.backgroundColor = .clear
-        window.hasShadow = true  // 启用阴影
+        window.hasShadow = true
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        window.isMovableByWindowBackground = true  // 允许拖动
+        window.isMovableByWindowBackground = true
         
-        // 居中显示
         window.center()
         
         self.window = window

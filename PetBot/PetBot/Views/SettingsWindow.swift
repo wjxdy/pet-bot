@@ -141,26 +141,22 @@ class SettingsWindowController: NSWindowController {
         y -= 35
         
         // 最大高度
-        let maxHeightLabel = NSTextField(labelWithString: "最大高度:")
+        let maxHeightLabel = NSTextField(labelWithString: "最大高度(px):")
         maxHeightLabel.sizeToFit()
         maxHeightLabel.frame.origin = CGPoint(x: 40, y: y)
         documentView.addSubview(maxHeightLabel)
         
-        let maxHeightField = NSTextField(frame: NSRect(x: 120, y: y, width: 80, height: 22))
+        let maxHeightField = NSTextField(frame: NSRect(x: 140, y: y, width: 80, height: 22))
         maxHeightField.tag = 1009
         maxHeightField.stringValue = "\(Int(AppConfiguration.petMaxHeight))"
         documentView.addSubview(maxHeightField)
         
-        // 缩放比例
-        let scaleLabel = NSTextField(labelWithString: "缩放比例:")
-        scaleLabel.sizeToFit()
-        scaleLabel.frame.origin = CGPoint(x: 210, y: y)
-        documentView.addSubview(scaleLabel)
-        
-        let scaleField = NSTextField(frame: NSRect(x: 290, y: y, width: 60, height: 22))
-        scaleField.tag = 1010
-        scaleField.stringValue = String(format: "%.1f", AppConfiguration.petScale)
-        documentView.addSubview(scaleField)
+        let hintLabel = NSTextField(labelWithString: "(超过此高度将等比例缩放)")
+        hintLabel.font = NSFont.systemFont(ofSize: 11)
+        hintLabel.textColor = .secondaryLabelColor
+        hintLabel.sizeToFit()
+        hintLabel.frame.origin = CGPoint(x: 230, y: y)
+        documentView.addSubview(hintLabel)
         
         y -= 45
         
@@ -339,10 +335,6 @@ class SettingsWindowController: NSWindowController {
                 case 1009: // Pet 最大高度
                     if let val = Double(textField.stringValue), val > 0 {
                         AppConfiguration.petMaxHeight = val
-                    }
-                case 1010: // Pet 缩放比例
-                    if let val = Double(textField.stringValue), val > 0 {
-                        AppConfiguration.petScale = val
                     }
                 default: break
                 }

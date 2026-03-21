@@ -24,17 +24,23 @@ enum AppConfiguration {
     private static let maxPetHeight: CGFloat = 130
     
     private static func getScaledImageSize() -> CGSize {
-        let maxHeight = petMaxHeight > 0 ? petMaxHeight : 130
-        let scale = petScale > 0 ? petScale : 1.0
+        let maxHeight = petMaxHeight
         
         if let image = NSImage(contentsOfFile: petImagePath) {
             let originalSize = image.size
-            let imageScale = min(1.0, maxHeight / originalSize.height) * scale
-            let scaledWidth = originalSize.width * imageScale
-            let scaledHeight = originalSize.height * imageScale
-            return CGSize(width: scaledWidth, height: scaledHeight + 25)
+            
+            // 只有当图片高度超过最大高度时才等比例缩放
+            if originalSize.height > maxHeight {
+                let scale = maxHeight / originalSize.height
+                let scaledWidth = originalSize.width * scale
+                let scaledHeight = originalSize.height * scale
+                return CGSize(width: scaledWidth, height: scaledHeight + 25)
+            } else {
+                // 图片高度小于等于最大高度，保持原大小
+                return CGSize(width: originalSize.width, height: originalSize.height + 25)
+            }
         }
-        return CGSize(width: 100 * scale, height: 155 * scale)
+        return CGSize(width: 100, height: 155)
     }
     
     // MARK: - Assets
@@ -43,16 +49,13 @@ enum AppConfiguration {
         set { UserDefaults.standard.set(newValue, forKey: "petImagePath") }
     }
     
-    /// Pet 最大高度
+    /// Pet 最大高度（等比例缩放，保持原比例）
     static var petMaxHeight: CGFloat {
-        get { CGFloat(UserDefaults.standard.double(forKey: "petMaxHeight")) }
+        get { 
+            let val = UserDefaults.standard.double(forKey: "petMaxHeight")
+            return val > 0 ? CGFloat(val) : 130
+        }
         set { UserDefaults.standard.set(Double(newValue), forKey: "petMaxHeight") }
-    }
-    
-    /// Pet 缩放比例 (0.5 - 2.0)
-    static var petScale: Double {
-        get { UserDefaults.standard.double(forKey: "petScale") }
-        set { UserDefaults.standard.set(newValue, forKey: "petScale") }
     }
     
     // MARK: - Hotkey
@@ -120,8 +123,7 @@ enum AppConfiguration {
             "selectedAgentId": "search",
             "autoReadAgentName": true,
             "petImagePath": "/Users/xulei/Desktop/new_a.png",
-            "petMaxHeight": 130.0,
-            "petScale": 1.0
+            "petMaxHeight": 160.0
         ]
         UserDefaults.standard.register(defaults: defaults)
     }

@@ -81,14 +81,18 @@ struct PetView: View {
 struct PetImageView: View {
     let imagePath: String
     
-    // 计算缩放后的尺寸（最大高度130px）
+    // 使用配置中的目标高度
+    private var targetHeight: CGFloat {
+        AppConfiguration.petMaxHeight
+    }
+    
+    // 计算缩放后的尺寸（固定为目标高度）
     private var scaledSize: CGSize {
         if let image = NSImage(contentsOfFile: imagePath) {
-            let maxHeight: CGFloat = 130
-            let scale = min(1.0, maxHeight / image.size.height)
-            return CGSize(width: image.size.width * scale, height: image.size.height * scale)
+            let scale = targetHeight / image.size.height
+            return CGSize(width: image.size.width * scale, height: targetHeight)
         }
-        return CGSize(width: 100, height: 130)
+        return CGSize(width: 100, height: targetHeight)
     }
     
     var body: some View {
@@ -103,7 +107,7 @@ struct PetImageView: View {
                 .resizable()
                 .scaledToFit()
                 .foregroundColor(.orange)
-                .frame(width: 123, height: 160)
+                .frame(width: targetHeight * 0.77, height: targetHeight)
         }
     }
 }

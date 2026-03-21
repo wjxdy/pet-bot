@@ -121,7 +121,20 @@ class InputWindowController: NSObject, NSWindowDelegate {
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.delegate = self
         window.isReleasedWhenClosed = false
-        window.center()
+        
+        // 设置位置（使用配置或居中）
+        let configX = AppConfiguration.inputInitialX
+        let configY = AppConfiguration.inputInitialY
+        
+        if configX >= 0 && configY >= 0 {
+            // 使用自定义位置
+            let windowWidth: CGFloat = 400
+            let windowHeight: CGFloat = 60
+            window.setFrameOrigin(NSPoint(x: configX - windowWidth/2, y: configY - windowHeight/2))
+        } else {
+            // 居中显示
+            window.center()
+        }
         
         self.window = window
         self.textField = textField

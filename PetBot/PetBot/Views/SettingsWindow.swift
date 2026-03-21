@@ -160,6 +160,51 @@ class SettingsWindowController: NSWindowController {
         
         y -= 45
         
+        // 输入框位置设置
+        let inputPosLabel = NSTextField(labelWithString: "输入框位置")
+        inputPosLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
+        inputPosLabel.textColor = .secondaryLabelColor
+        inputPosLabel.sizeToFit()
+        inputPosLabel.frame.origin = CGPoint(x: 20, y: y)
+        documentView.addSubview(inputPosLabel)
+        
+        y -= 35
+        
+        // 输入框 X 位置
+        let inputXLabel = NSTextField(labelWithString: "X:")
+        inputXLabel.sizeToFit()
+        inputXLabel.frame.origin = CGPoint(x: 40, y: y)
+        documentView.addSubview(inputXLabel)
+        
+        let inputXField = NSTextField(frame: NSRect(x: 70, y: y, width: 80, height: 22))
+        inputXField.tag = 1011
+        let inputX = AppConfiguration.inputInitialX
+        inputXField.stringValue = inputX < 0 ? "" : "\(Int(inputX))"
+        inputXField.placeholderString = "居中"
+        documentView.addSubview(inputXField)
+        
+        // 输入框 Y 位置
+        let inputYLabel = NSTextField(labelWithString: "Y:")
+        inputYLabel.sizeToFit()
+        inputYLabel.frame.origin = CGPoint(x: 170, y: y)
+        documentView.addSubview(inputYLabel)
+        
+        let inputYField = NSTextField(frame: NSRect(x: 200, y: y, width: 80, height: 22))
+        inputYField.tag = 1012
+        let inputY = AppConfiguration.inputInitialY
+        inputYField.stringValue = inputY < 0 ? "" : "\(Int(inputY))"
+        inputYField.placeholderString = "居中"
+        documentView.addSubview(inputYField)
+        
+        let inputHintLabel = NSTextField(labelWithString: "(留空则居中显示)")
+        inputHintLabel.font = NSFont.systemFont(ofSize: 11)
+        inputHintLabel.textColor = .secondaryLabelColor
+        inputHintLabel.sizeToFit()
+        inputHintLabel.frame.origin = CGPoint(x: 290, y: y)
+        documentView.addSubview(inputHintLabel)
+        
+        y -= 45
+        
         // 气泡框位置设置
         let bubblePosLabel = NSTextField(labelWithString: "气泡框位置偏移")
         bubblePosLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
@@ -335,6 +380,18 @@ class SettingsWindowController: NSWindowController {
                 case 1009: // Pet 最大高度
                     if let val = Double(textField.stringValue), val > 0 {
                         AppConfiguration.petMaxHeight = val
+                    }
+                case 1011: // 输入框 X 位置
+                    if let val = Double(textField.stringValue), val > 0 {
+                        AppConfiguration.inputInitialX = val
+                    } else {
+                        AppConfiguration.inputInitialX = -1
+                    }
+                case 1012: // 输入框 Y 位置
+                    if let val = Double(textField.stringValue), val > 0 {
+                        AppConfiguration.inputInitialY = val
+                    } else {
+                        AppConfiguration.inputInitialY = -1
                     }
                 default: break
                 }

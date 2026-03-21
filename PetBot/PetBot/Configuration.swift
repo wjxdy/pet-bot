@@ -107,7 +107,23 @@ enum AppConfiguration {
         set { UserDefaults.standard.set(newValue, forKey: "openclawPath") }
     }
     
-    // MARK: - Default Values
+    /// 输入框初始位置 X
+    static var inputInitialX: Double {
+        get { 
+            let val = UserDefaults.standard.double(forKey: "inputInitialX")
+            return val != 0 ? val : -1  // -1 表示居中
+        }
+        set { UserDefaults.standard.set(newValue, forKey: "inputInitialX") }
+    }
+    
+    /// 输入框初始位置 Y
+    static var inputInitialY: Double {
+        get { 
+            let val = UserDefaults.standard.double(forKey: "inputInitialY")
+            return val != 0 ? val : -1  // -1 表示居中
+        }
+        set { UserDefaults.standard.set(newValue, forKey: "inputInitialY") }
+    }
     
     static func registerDefaults() {
         let defaults: [String: Any] = [
@@ -119,7 +135,9 @@ enum AppConfiguration {
             "selectedAgentId": "search",
             "autoReadAgentName": true,
             "petImagePath": "/Users/xulei/Desktop/new_a.png",
-            "petMaxHeight": 160.0
+            "petMaxHeight": 160.0,
+            "inputInitialX": -1.0,
+            "inputInitialY": -1.0
         ]
         UserDefaults.standard.register(defaults: defaults)
     }

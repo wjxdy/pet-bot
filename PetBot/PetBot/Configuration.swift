@@ -84,6 +84,12 @@ enum AppConfiguration {
         set { UserDefaults.standard.set(newValue, forKey: "autoReadAgentName") }
     }
     
+    /// OpenClaw 配置文件夹路径
+    static var openclawPath: String {
+        get { UserDefaults.standard.string(forKey: "openclawPath") ?? "~/.openclaw" }
+        set { UserDefaults.standard.set(newValue, forKey: "openclawPath") }
+    }
+    
     // MARK: - Default Values
     
     static func registerDefaults() {

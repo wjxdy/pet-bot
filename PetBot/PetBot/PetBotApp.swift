@@ -282,6 +282,40 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         y -= 50
         
+        // AI 模型配置
+        let aiLabel = NSTextField(labelWithString: "AI 模型配置")
+        aiLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
+        aiLabel.textColor = .secondaryLabelColor
+        aiLabel.sizeToFit()
+        aiLabel.frame.origin = CGPoint(x: 20, y: y)
+        contentView.addSubview(aiLabel)
+        
+        y -= 40
+        
+        // 提供商选择
+        let providerLabel = NSTextField(labelWithString: "提供商:")
+        providerLabel.sizeToFit()
+        providerLabel.frame.origin = CGPoint(x: 40, y: y)
+        contentView.addSubview(providerLabel)
+        
+        let providerPopUp = NSPopUpButton(frame: NSRect(x: 120, y: y, width: 200, height: 25))
+        providerPopUp.addItems(withTitles: ["OpenAI", "Anthropic Claude", "OpenClaw Gateway"])
+        contentView.addSubview(providerPopUp)
+        
+        y -= 40
+        
+        // OpenClaw 路径设置
+        let pathLabel = NSTextField(labelWithString: "OpenClaw 路径:")
+        pathLabel.sizeToFit()
+        pathLabel.frame.origin = CGPoint(x: 40, y: y)
+        contentView.addSubview(pathLabel)
+        
+        let pathField = NSTextField(frame: NSRect(x: 160, y: y, width: 250, height: 22))
+        pathField.stringValue = AppConfiguration.openclawPath
+        contentView.addSubview(pathField)
+        
+        y -= 50
+        
         // Agent 选择
         let agentLabel = NSTextField(labelWithString: "Agent 选择")
         agentLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
@@ -328,27 +362,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func closeSettingsWindow(_ sender: NSButton) {
         guard let window = sender.window, let contentView = window.contentView else { return }
         
-        // 查找 X 和 Y 输入框（通过遍历 subviews）
-        var xField: NSTextField?
-        var yField: NSTextField?
-        
+        // 查找并保存设置
         for view in contentView.subviews {
             if let textField = view as? NSTextField {
-                // 通过位置或标签来识别 X 和 Y 字段
+                // 通过位置识别 X 和 Y 字段
                 if textField.frame.origin.x == 70 && textField.frame.width == 80 {
-                    xField = textField
+                    if let x = Double(textField.stringValue) {
+                        UserDefaults.standard.set(x, forKey: "petInitialX")
+                    }
                 } else if textField.frame.origin.x == 200 && textField.frame.width == 80 {
-                    yField = textField
+                    if let y = Double(textField.stringValue) {
+                        UserDefaults.standard.set(y, forKey: "petInitialY")
+                    }
+                } else if textField.frame.origin.x == 160 && textField.frame.width == 250 {
+                    // OpenClaw 路径
+                    AppConfiguration.openclawPath = textField.stringValue
                 }
             }
-        }
-        
-        // 保存 Pet 位置设置
-        if let xText = xField?.stringValue, let x = Double(xText) {
-            UserDefaults.standard.set(x, forKey: "petInitialX")
-        }
-        if let yText = yField?.stringValue, let y = Double(yText) {
-            UserDefaults.standard.set(y, forKey: "petInitialY")
         }
         
         // 关闭窗口

@@ -72,6 +72,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "关于 PetBot", action: #selector(showAbout), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         
+        // 聊天历史
+        let chatHistoryItem = NSMenuItem(title: "打开聊天历史", action: #selector(openChatHistory), keyEquivalent: "")
+        chatHistoryItem.target = self
+        menu.addItem(chatHistoryItem)
+        menu.addItem(NSMenuItem.separator())
+        
         // 设置
         let settingsItem = NSMenuItem(title: "设置...", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.keyEquivalentModifierMask = .command
@@ -199,11 +205,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Settings
     @objc private func openChatHistory() {
+        print("[PetBot] Opening chat history...")
+        
+        // 恢复使用 ChatHistoryWindowController
         if ChatHistoryWindowController.shared == nil {
+            print("[PetBot] Creating ChatHistoryWindowController...")
             let controller = ChatHistoryWindowController()
             controller.setup(with: viewModel)
         }
-        ChatHistoryWindowController.shared?.showWindow()
+        print("[PetBot] Showing chat window...")
+        ChatHistoryWindowController.shared?.showChatWindow()
     }
     
     @objc private func openSettings() {

@@ -21,15 +21,23 @@ class ChatHistoryWindowController: NSWindowController {
         loadChatHistories()
     }
     
-    func showWindow() {
+    func showChatWindow() {
         ChatHistoryWindowController.shared = self
         
         if window == nil {
+            print("[ChatHistory] Creating window...")
             createWindow()
         }
         
-        window?.makeKeyAndOrderFront(nil)
+        guard let window = window else {
+            print("[ChatHistory] Failed to create window!")
+            return
+        }
+        
+        print("[ChatHistory] Showing window...")
+        window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        print("[ChatHistory] Window should be visible now")
     }
     
     func addMessage(_ message: ChatMessage, for agentId: String) {
@@ -85,6 +93,7 @@ class ChatHistoryWindowController: NSWindowController {
         
         window.contentView = splitView
         self.window = window
+        window.center()  // 窗口居中显示
     }
     
     private func createSidebarView() -> NSView {

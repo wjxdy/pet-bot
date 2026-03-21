@@ -1,5 +1,5 @@
 // BubbleWindow.swift
-// 独立的气泡窗口
+// 独立的气泡窗口 - 使用 AppKit 原生方法
 
 import SwiftUI
 import AppKit
@@ -9,35 +9,36 @@ class BubbleWindowController: NSObject {
     static let shared = BubbleWindowController()
     
     private var window: NSPanel?
-    private var hostingController: NSHostingController<BubbleView>?
-    private var isPositioned = false // 标记是否已设置过初始位置
+    private var currentText: String = ""
+    private var isPositioned = false
     
     var isVisible: Bool {
         window?.isVisible ?? false
     }
     
     func show(text: String, anchorWindow: NSWindow?) {
-        // 如果窗口不存在则创建
+        currentText = text
+        
+        // 创建或获取窗口
         if window == nil {
             createWindow()
             isPositioned = false
-            AppLogger.info("创建气泡窗口")
         }
         
         // 更新内容
         updateContent(text: text)
-        AppLogger.info("更新气泡内容: \(text.prefix(50))...")
         
-        // 只在第一次显示时定位到宠物窗口
+        // 定位（只在第一次）
         if !isPositioned {
-            positionWindow(anchorWindow: anchorWindow)
+            positionNearAnchor(anchorWindow)
             isPositioned = true
-            AppLogger.info("定位气泡窗口到宠物左上方")
         }
         
-        // 显示窗口
+        // 显示
         window?.orderFront(nil)
-        AppLogger.info("气泡窗口已显示")
+        window?.alphaValue = 1.0
+        
+        print("[PetBot] 气泡显示: \(text.prefix(30))...")
     }
     
     func hide() {
@@ -47,134 +48,122 @@ class BubbleWindowController: NSObject {
     func close() {
         window?.close()
         window = nil
-        hostingController = nil
-        isPositioned = false
-    }
-    
-    func resetPosition() {
         isPositioned = false
     }
     
     private func createWindow() {
-        // 创建初始气泡视图
-        let bubbleView = BubbleView(
-            text: "初始化...",
+        // 创建窗口内容
+        let contentView = BubbleContentView(
+            text: Binding(
+                get: { self.currentText },
+                set: { self.currentText = $0 }
+            ),
             onClose: { [weak self] in
                 self?.hide()
             }
         )
         
-        let hostingController = NSHostingController(rootView: bubbleView)
-        self.hostingController = hostingController
+        let hostingView = NSHostingView(rootView: contentView)
+        hostingView.frame = NSRect(x: 0, y: 0, width: 260, height: 200)
         
-        // 计算窗口大小 - 使用 SwiftUI 的 idealSize
-        let windowSize = NSSize(width: 240, height: 100)
-        
-        // 创建无边框浮动窗口
+        // 创建窗口
         let window = NSPanel(
-            contentRect: NSRect(origin: .zero, size: windowSize),
+            contentRect: NSRect(x: 0, y: 0, width: 260, height: 200),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
         
+        window.contentView = hostingView
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = true
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.isMovableByWindowBackground = true
-        window.contentViewController = hostingController
         
         self.window = window
-        AppLogger.info("气泡窗口创建完成，大小: \(windowSize)")
     }
     
     private func updateContent(text: String) {
-        // 在主线程更新内容
-        DispatchQueue.main.async { [weak self] in
-            let bubbleView = BubbleView(
-                text: text,
-                onClose: { [weak self] in
-                    self?.hide()
-                }
-            )
-            self?.hostingController?.rootView = bubbleView
-        }
+        guard let hostingView = window?.contentView as? NSHostingView<BubbleContentView> else { return }
+        
+        // 重新创建视图以更新内容
+        let newView = BubbleContentView(
+            text: Binding(
+                get: { text },
+                set: { _ in }
+            ),
+            onClose: { [weak self] in
+                self?.hide()
+            }
+        )
+        hostingView.rootView = newView
+        
+        // 调整窗口大小以适应内容
+        let size = hostingView.fittingSize
+        var frame = window?.frame ?? NSRect.zero
+        frame.size = NSSize(width: max(260, size.width), height: max(80, size.height))
+        window?.setFrame(frame, display: true)
     }
     
-    private func positionWindow(anchorWindow: NSWindow?) {
-        guard let window = window else { 
-            AppLogger.error("气泡窗口不存在")
-            return 
-        }
+    private func positionNearAnchor(_ anchorWindow: NSWindow?) {
+        guard let window = window else { return }
         
         if let anchor = anchorWindow {
-            // macOS 坐标原点在左下角
-            // 宠物窗口的底部 Y 坐标
+            // 获取锚定窗口的屏幕坐标
             let anchorFrame = anchor.frame
-            let bubbleX = anchorFrame.origin.x + 10 // 左边偏一点
-            // 气泡放在宠物上方，所以 Y = 宠物Y + 宠物高度 + 间距
-            let bubbleY = anchorFrame.origin.y + anchorFrame.height + 10
             
-            window.setFrameOrigin(NSPoint(x: bubbleX, y: bubbleY))
-            AppLogger.info("气泡位置: x=\(bubbleX), y=\(bubbleY), 宠物位置: x=\(anchorFrame.origin.x), y=\(anchorFrame.origin.y), 高=\(anchorFrame.height)")
-        } else {
-            // 如果没有锚定窗口，显示在屏幕中央
-            let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-            let x = screen.midX - 120
-            let y = screen.midY
+            // 气泡位置：宠物左上方
+            let x = anchorFrame.origin.x - 50 // 左边一点
+            let y = anchorFrame.origin.y + anchorFrame.height + 10 // 上方
+            
             window.setFrameOrigin(NSPoint(x: x, y: y))
-            AppLogger.info("气泡位置(默认): x=\(x), y=\(y)")
+            print("[PetBot] 气泡位置: (\(x), \(y))")
         }
     }
 }
 
-// MARK: - Bubble View
-struct BubbleView: View {
-    let text: String
+// MARK: - SwiftUI Content View
+struct BubbleContentView: View {
+    @Binding var text: String
     let onClose: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // 关闭按钮 - 右上角
+            // 关闭按钮
             HStack {
                 Spacer()
                 Button(action: onClose) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 14, weight: .bold))
                         .foregroundColor(.black)
+                        .frame(width: 24, height: 24)
                 }
                 .buttonStyle(PlainButtonStyle())
             }
             
-            // 消息文本
-            if !text.isEmpty {
-                Text(text)
+            // 内容
+            ScrollView {
+                Text(text.isEmpty ? "(等待回复...)" : text)
                     .font(.system(size: 14))
-                    .foregroundColor(.black)
+                    .foregroundColor(text.isEmpty ? .gray : .black)
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: 200, alignment: .leading)
-            } else {
-                Text("(无内容)")
-                    .font(.system(size: 14))
-                    .foregroundColor(.gray)
+                    .frame(maxWidth: 220, alignment: .leading)
+                    .padding(.trailing, 8)
             }
+            .frame(maxHeight: 300)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(12)
         .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.black.opacity(0.2))
-                    .offset(x: 3, y: 3)
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.white)
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.black, lineWidth: 2.5)
-            }
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white)
+                .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 4)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.black.opacity(0.2), lineWidth: 1)
+                )
         )
-        .frame(minWidth: 200, maxWidth: 240, minHeight: 60)
     }
 }

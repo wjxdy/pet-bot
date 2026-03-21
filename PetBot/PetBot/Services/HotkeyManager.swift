@@ -1,39 +1,80 @@
 // HotkeyManager.swift
-// 全局快捷键管理
+// 全局快捷键管理 - 使用 Carbon API 实现可靠的全局监听
 
+import Carbon
 import Cocoa
 
-class HotkeyManager: NSObject {
+class HotkeyManager {
     static let shared = HotkeyManager()
     
     var onHotkeyPressed: (() -> Void)?
+    private var eventHandler: EventHandlerRef?
+    private var hotKeyRef: EventHotKeyRef?
+    private let hotKeyID = EventHotKeyID(signature: FourCharCode("PBOT") ?? 0, id: 1)
     
     func register() {
-        // 注册全局快捷键 Option + Space
-        // 使用 keyCode 49 (Space) + Option 修饰符
-        NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            // 检查是否是 Option + Space
-            // keyCode 49 = Space, 58/61 = Option (左右)
-            if event.keyCode == 49 && event.modifierFlags.intersection(.deviceIndependentFlagsMask).contains(.option) {
+        // 安装事件处理器
+        var eventType = EventTypeSpec(
+            eventClass: OSType(kEventClassKeyboard),
+            eventKind: UInt32(kEventHotKeyPressed)
+        )
+        
+        let callback: EventHandlerUPP = { _, event, _ -> OSStatus in
+            // 获取热键 ID
+            var hotKeyID = EventHotKeyID()
+            GetEventParameter(
+                event,
+                EventParamName(kEventParamDirectObject),
+                EventParamType(typeEventHotKeyID),
+                nil,
+                MemoryLayout<EventHotKeyID>.size,
+                nil,
+                &hotKeyID
+            )
+            
+            if hotKeyID.id == 1 {
                 DispatchQueue.main.async {
-                    AppLogger.info("快捷键触发: Option+Space")
-                    self?.onHotkeyPressed?()
+                    AppLogger.info("全局快捷键触发")
+                    HotkeyManager.shared.onHotkeyPressed?()
                 }
             }
+            return noErr
         }
         
-        // 也监听本地事件（当应用处于激活状态时）
-        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.keyCode == 49 && event.modifierFlags.intersection(.deviceIndependentFlagsMask).contains(.option) {
-                DispatchQueue.main.async {
-                    AppLogger.info("快捷键触发 (本地): Option+Space")
-                    self?.onHotkeyPressed?()
-                }
-                return nil // 消费掉事件
-            }
-            return event
-        }
+        InstallEventHandler(
+            GetApplicationEventTarget(),
+            callback,
+            1,
+            &eventType,
+            nil,
+            &eventHandler
+        )
         
-        AppLogger.success("热键 Option+Space 已注册")
+        // 注册 Option + Space 热键
+        // keyCode: 49 = Space
+        // modifiers: optionKey
+        let status = RegisterEventHotKey(
+            UInt32(49), // Space
+            UInt32(optionKey),
+            hotKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &hotKeyRef
+        )
+        
+        if status == noErr {
+            AppLogger.success("全局快捷键 Option+Space 已注册")
+        } else {
+            AppLogger.error("注册快捷键失败: \(status)")
+        }
+    }
+    
+    func unregister() {
+        if let hotKey = hotKeyRef {
+            UnregisterEventHotKey(hotKey)
+        }
+        if let handler = eventHandler {
+            RemoveEventHandler(handler)
+        }
     }
 }

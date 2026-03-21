@@ -14,13 +14,22 @@ struct PetView: View {
             // 宠物主体
             petContent
             
-            // 对话气泡
+            // 对话气泡 - 紧贴宠物左上角，向上扩展
             if showBubble, !lastResponse.isEmpty {
-                BubbleView(
-                    text: lastResponse,
-                    onClose: { showBubble = false }
-                )
-                .position(x: 220, y: 180) // 向左调整避免截断
+                VStack {
+                    Spacer() // 把气泡推到上方
+                    HStack {
+                        // 气泡在宠物左侧
+                        BubbleView(
+                            text: lastResponse,
+                            onClose: { showBubble = false }
+                        )
+                        .padding(.leading, 10) // 左边距
+                        
+                        Spacer() // 把气泡推到左边
+                    }
+                    .padding(.bottom, 280) // 底部对齐到宠物上方
+                }
                 .transition(.scale.combined(with: .opacity))
             }
         }
@@ -128,6 +137,7 @@ struct BubbleView: View {
     
     var body: some View {
         VStack(alignment: .trailing, spacing: 6) {
+            // 关闭按钮
             Button(action: onClose) {
                 Image(systemName: "xmark")
                     .font(.system(size: 12, weight: .bold))
@@ -135,16 +145,17 @@ struct BubbleView: View {
             }
             .buttonStyle(PlainButtonStyle())
             
+            // 消息文本 - 自适应高度
             Text(text)
                 .font(.system(size: 14))
                 .foregroundColor(.black)
                 .lineSpacing(4)
-                .frame(maxWidth: AppConfiguration.bubbleMaxWidth, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true) // 允许垂直扩展
+                .frame(maxWidth: 200, alignment: .leading)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .background(bubbleBackground)
-        .frame(width: AppConfiguration.bubbleMaxWidth + 40)
     }
     
     private var bubbleBackground: some View {

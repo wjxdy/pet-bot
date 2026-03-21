@@ -26,21 +26,25 @@ struct PetView: View {
                 }
             }
             
-            // 宠物和名字 - 底部居中，名字在上
-            VStack(spacing: 6) {
+            // 宠物和名字 - 底部居中，图片在上，名字在下
+            VStack(spacing: 8) {
                 Spacer() // 上方留白，把宠物推到底部
                 
-                // === 名字在上 ===
-                Text(agentManager.currentAgent.name)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 5)
-                    .background(Capsule().fill(agentManager.currentAgent.color))
-                
-                // === 图片在下 ===
+                // === 图片在上 ===
                 PetImage()
                     .frame(width: 130, height: 130)
+                
+                // === 名字在下（更小字体）===
+                Text(agentManager.currentAgent.name)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(agentManager.currentAgent.color.opacity(0.9))
+                            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                    )
                     .padding(.bottom, 20)
             }
         }

@@ -30,9 +30,8 @@ struct PetView: View {
     // MARK: - Subviews
     private var petContent: some View {
         VStack(spacing: 4) {
-            // 图片填满窗口（减去名字标签空间）
+            // 图片自动适应大小
             PetImageView(imagePath: AppConfiguration.petImagePath)
-                .frame(width: 200, height: 260)
             
             AgentNameLabel(name: viewModel.currentAgent.name)
         }
@@ -87,13 +86,15 @@ struct PetImageView: View {
         if let img = NSImage(contentsOfFile: imagePath) {
             Image(nsImage: img)
                 .resizable()
-                .scaledToFit()
+                .aspectRatio(contentMode: .fit) // 保持比例
+                .frame(width: img.size.width, height: img.size.height) // 实际尺寸
                 .shadow(radius: 8, x: 0, y: 4)
         } else {
             Image(systemName: "cat.fill")
                 .resizable()
                 .scaledToFit()
                 .foregroundColor(.orange)
+                .frame(width: 200, height: 260)
         }
     }
 }

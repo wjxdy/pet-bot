@@ -16,10 +16,25 @@ enum AppConfiguration {
     static let defaultAgentId = "search" // 小米鼠
     
     // MARK: - UI Configuration
-    // 窗口大小与图片一致 (200 x 260)
-    static let petWindowSize = CGSize(width: 200, height: 290)
+    // 窗口大小自动根据图片尺寸计算
     static let inputWindowSize = CGSize(width: 300, height: 100)
     static let bubbleMaxWidth: CGFloat = 200
+    
+    // 动态计算宠物窗口大小（根据图片尺寸）
+    static var petWindowSize: CGSize {
+        getImageSize()
+    }
+    
+    // 获取图片尺寸并添加边距
+    private static func getImageSize() -> CGSize {
+        if let image = NSImage(contentsOfFile: petImagePath) {
+            let size = image.size
+            // 图片尺寸 + 底部空间给名字标签
+            return CGSize(width: size.width, height: size.height + 30)
+        }
+        // 默认尺寸
+        return CGSize(width: 200, height: 290)
+    }
     
     // MARK: - Assets
     static let petImagePath = "/Users/xulei/Desktop/new_a.png"

@@ -131,16 +131,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Pet Window
     private func setupPetWindow() {
-        petWindow = PetWindow(
+        // 先创建窗口
+        let newWindow = PetWindow(
             contentRect: NSRect(origin: .zero, size: AppConfiguration.petWindowSize),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
         )
+        self.petWindow = newWindow
         
-        let contentView = PetView(petWindow: petWindow)
-        petWindow?.contentView = NSHostingView(rootView: contentView)
-        petWindow?.makeKeyAndOrderFront(nil)
+        // 再创建内容视图，确保 petWindow 已设置
+        let contentView = PetView(petWindow: newWindow)
+        newWindow.contentView = NSHostingView(rootView: contentView)
+        newWindow.makeKeyAndOrderFront(nil)
     }
     
     // MARK: - Status Bar

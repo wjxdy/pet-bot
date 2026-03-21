@@ -20,7 +20,7 @@ struct PetView: View {
                     text: lastResponse,
                     onClose: { showBubble = false }
                 )
-                .position(x: 260, y: 200)
+                .position(x: 220, y: 180) // 向左调整避免截断
                 .transition(.scale.combined(with: .opacity))
             }
         }

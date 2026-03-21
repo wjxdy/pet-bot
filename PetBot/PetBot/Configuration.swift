@@ -18,7 +18,7 @@ enum AppConfiguration {
     // MARK: - UI Configuration
     static let petWindowSize = CGSize(width: 360, height: 400)
     static let inputWindowSize = CGSize(width: 300, height: 100)
-    static let bubbleMaxWidth: CGFloat = 260
+    static let bubbleMaxWidth: CGFloat = 200  // 减小宽度避免截断
     
     // MARK: - Assets
     static let petImagePath = "/Users/xulei/Desktop/new_a.png"

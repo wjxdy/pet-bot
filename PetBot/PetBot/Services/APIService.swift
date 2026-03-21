@@ -47,12 +47,16 @@ actor OpenClawAPIService: APIServiceProtocol {
         process.executableURL = URL(fileURLWithPath: "/usr/local/bin/openclaw")
         
         // 使用 openclaw agent 命令
-        // openclaw agent --agent search --message "xxx"
         process.arguments = [
             "agent",
             "--agent", agentId,
             "--message", message
         ]
+        
+        // 禁用插件日志输出
+        var env = ProcessInfo.processInfo.environment
+        env["OPENCLAW_LOG_LEVEL"] = "silent"
+        process.environment = env
         
         let pipe = Pipe()
         let errorPipe = Pipe()
@@ -64,13 +68,22 @@ actor OpenClawAPIService: APIServiceProtocol {
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
                 
-                let output = String(data: data, encoding: .utf8) ?? ""
+                var output = String(data: data, encoding: .utf8) ?? ""
                 let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
+                
+                // 过滤掉插件日志行
+                let lines = output.components(separatedBy: .newlines)
+                let filteredLines = lines.filter { line in
+                    !line.contains("[plugins]") && 
+                    !line.contains("Registered") &&
+                    !line.contains("🦞 OpenClaw") &&
+                    !line.isEmpty
+                }
+                output = filteredLines.joined(separator: "\n")
                 
                 if proc.terminationStatus == 0 {
                     AppLogger.success("Agent 响应成功，长度: \(output.count)")
-                    // 返回输出，如果为空则给个默认提示
-                    continuation.resume(returning: output.isEmpty ? "(Agent 已处理，无文本输出)" : output)
+                    continuation.resume(returning: output.isEmpty ? "(Agent 已处理)" : output)
                 } else {
                     AppLogger.error("Agent 失败: \(errorOutput)")
                     continuation.resume(throwing: APIError.cliError(errorOutput))

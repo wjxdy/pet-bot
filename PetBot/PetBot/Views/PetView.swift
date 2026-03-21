@@ -10,22 +10,6 @@ struct PetView: View {
     
     var body: some View {
         ZStack {
-            // 回复气泡
-            if showResponseBubble && !currentResponseText.isEmpty {
-                VStack {
-                    DialogBubble(
-                        text: currentResponseText,
-                        onClose: {
-                            withAnimation {
-                                showResponseBubble = false
-                            }
-                        }
-                    )
-                    .padding(.top, 30)
-                    Spacer()
-                }
-            }
-            
             // 宠物和名字 - 底部居中，图片在上，名字在下
             VStack(spacing: 8) {
                 Spacer() // 上方留白，把宠物推到底部
@@ -42,6 +26,19 @@ struct PetView: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)
                     .padding(.bottom, 20)
+            }
+            
+            // 回复气泡 - 显示在宠物右上角
+            if showResponseBubble && !currentResponseText.isEmpty {
+                DialogBubble(
+                    text: currentResponseText,
+                    onClose: {
+                        withAnimation {
+                            showResponseBubble = false
+                        }
+                    }
+                )
+                .position(x: 280, y: 120) // 右上角位置（相对于 360x400 的窗口）
             }
         }
         .frame(width: 360, height: 400)

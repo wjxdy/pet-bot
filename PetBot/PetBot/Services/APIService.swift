@@ -1,5 +1,5 @@
 // APIService.swift
-// API 服务层 - 统一的网络请求管理
+// API 服务层 - 使用 OpenClaw CLI
 
 import Foundation
 
@@ -13,6 +13,7 @@ enum APIError: Error, LocalizedError {
     case invalidResponse
     case serverError(Int, String)
     case decodingError
+    case cliError(String)
     
     var errorDescription: String? {
         switch self {
@@ -26,6 +27,8 @@ enum APIError: Error, LocalizedError {
             return "服务器错误 (\(code)): \(message)"
         case .decodingError:
             return "解析响应失败"
+        case .cliError(let msg):
+            return "CLI 错误: \(msg)"
         }
     }
 }
@@ -33,65 +36,52 @@ enum APIError: Error, LocalizedError {
 actor OpenClawAPIService: APIServiceProtocol {
     static let shared = OpenClawAPIService()
     
-    private let session: URLSession
-    private let baseURL: String
-    
-    init() {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 60
-        config.timeoutIntervalForResource = 300
-        self.session = URLSession(configuration: config)
-        self.baseURL = AppConfiguration.gatewayURL
-    }
-    
     func sendMessage(_ message: String, agentId: String) async throws -> String {
-        // 尝试调用 OpenClaw agent
-        do {
-            return try await callOpenClawAgent(message: message, agentId: agentId)
-        } catch {
-            AppLogger.error("OpenClaw 调用失败: \(error.localizedDescription)")
-            // 失败时返回模拟响应
-            return "[模拟] 收到: \(message)\n\n(OpenClaw 连接失败，使用模拟响应)"
-        }
+        return try await callOpenClawAgent(message: message, agentId: agentId)
     }
     
     private func callOpenClawAgent(message: String, agentId: String) async throws -> String {
-        // 使用 OpenClaw sessions_send 工具内部 API
-        // 由于 HTTP API 可能不可用，这里使用简单的模拟
-        // 实际使用时需要配置正确的 OpenClaw agent HTTP 端点
+        AppLogger.info("调用 OpenClaw agent: \(agentId)")
         
-        throw APIError.invalidURL
-    }
-    
-    private func parseResponse(_ data: Data) throws -> String {
-        // 尝试解析 JSON
-        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            let possibleKeys = ["response", "message", "content", "text", "result"]
-            for key in possibleKeys {
-                if let content = json[key] as? String {
-                    return content
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/local/bin/openclaw")
+        
+        // 使用 openclaw agent 命令
+        // openclaw agent --agent search --message "xxx"
+        process.arguments = [
+            "agent",
+            "--agent", agentId,
+            "--message", message
+        ]
+        
+        let pipe = Pipe()
+        let errorPipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = errorPipe
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            process.terminationHandler = { proc in
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                
+                let output = String(data: data, encoding: .utf8) ?? ""
+                let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
+                
+                if proc.terminationStatus == 0 {
+                    AppLogger.success("Agent 响应成功，长度: \(output.count)")
+                    // 返回输出，如果为空则给个默认提示
+                    continuation.resume(returning: output.isEmpty ? "(Agent 已处理，无文本输出)" : output)
+                } else {
+                    AppLogger.error("Agent 失败: \(errorOutput)")
+                    continuation.resume(throwing: APIError.cliError(errorOutput))
                 }
             }
+            
+            do {
+                try process.run()
+            } catch {
+                continuation.resume(throwing: APIError.cliError(error.localizedDescription))
+            }
         }
-        
-        // 返回原始文本
-        if let text = String(data: data, encoding: .utf8) {
-            return text
-        }
-        
-        throw APIError.decodingError
     }
-}
-
-// MARK: - Request/Response Models
-struct OpenClawRequest: Codable {
-    let message: String
-    let agent: String
-}
-
-struct OpenClawResponse: Codable {
-    let response: String?
-    let message: String?
-    let content: String?
-    let error: String?
 }

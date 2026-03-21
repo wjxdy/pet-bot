@@ -117,6 +117,53 @@ class SettingsWindowController: NSWindowController {
         
         y -= 45
         
+        // Pet UI 设置
+        let petUILabel = NSTextField(labelWithString: "Pet UI 设置")
+        petUILabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
+        petUILabel.textColor = .secondaryLabelColor
+        petUILabel.sizeToFit()
+        petUILabel.frame.origin = CGPoint(x: 20, y: y)
+        documentView.addSubview(petUILabel)
+        
+        y -= 35
+        
+        // 图片路径
+        let imagePathLabel = NSTextField(labelWithString: "图片路径:")
+        imagePathLabel.sizeToFit()
+        imagePathLabel.frame.origin = CGPoint(x: 40, y: y)
+        documentView.addSubview(imagePathLabel)
+        
+        let imagePathField = NSTextField(frame: NSRect(x: 120, y: y, width: 290, height: 22))
+        imagePathField.tag = 1008
+        imagePathField.stringValue = AppConfiguration.petImagePath
+        documentView.addSubview(imagePathField)
+        
+        y -= 35
+        
+        // 最大高度
+        let maxHeightLabel = NSTextField(labelWithString: "最大高度:")
+        maxHeightLabel.sizeToFit()
+        maxHeightLabel.frame.origin = CGPoint(x: 40, y: y)
+        documentView.addSubview(maxHeightLabel)
+        
+        let maxHeightField = NSTextField(frame: NSRect(x: 120, y: y, width: 80, height: 22))
+        maxHeightField.tag = 1009
+        maxHeightField.stringValue = "\(Int(AppConfiguration.petMaxHeight))"
+        documentView.addSubview(maxHeightField)
+        
+        // 缩放比例
+        let scaleLabel = NSTextField(labelWithString: "缩放比例:")
+        scaleLabel.sizeToFit()
+        scaleLabel.frame.origin = CGPoint(x: 210, y: y)
+        documentView.addSubview(scaleLabel)
+        
+        let scaleField = NSTextField(frame: NSRect(x: 290, y: y, width: 60, height: 22))
+        scaleField.tag = 1010
+        scaleField.stringValue = String(format: "%.1f", AppConfiguration.petScale)
+        documentView.addSubview(scaleField)
+        
+        y -= 45
+        
         // 气泡框位置设置
         let bubblePosLabel = NSTextField(labelWithString: "气泡框位置偏移")
         bubblePosLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
@@ -287,6 +334,16 @@ class SettingsWindowController: NSWindowController {
                     }
                 case 1007: // OpenClaw 路径
                     AppConfiguration.openclawPath = textField.stringValue
+                case 1008: // Pet 图片路径
+                    AppConfiguration.petImagePath = textField.stringValue
+                case 1009: // Pet 最大高度
+                    if let val = Double(textField.stringValue), val > 0 {
+                        AppConfiguration.petMaxHeight = val
+                    }
+                case 1010: // Pet 缩放比例
+                    if let val = Double(textField.stringValue), val > 0 {
+                        AppConfiguration.petScale = val
+                    }
                 default: break
                 }
             }

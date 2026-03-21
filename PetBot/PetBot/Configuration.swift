@@ -24,18 +24,36 @@ enum AppConfiguration {
     private static let maxPetHeight: CGFloat = 130
     
     private static func getScaledImageSize() -> CGSize {
+        let maxHeight = petMaxHeight > 0 ? petMaxHeight : 130
+        let scale = petScale > 0 ? petScale : 1.0
+        
         if let image = NSImage(contentsOfFile: petImagePath) {
             let originalSize = image.size
-            let scale = min(1.0, maxPetHeight / originalSize.height)
-            let scaledWidth = originalSize.width * scale
-            let scaledHeight = originalSize.height * scale
+            let imageScale = min(1.0, maxHeight / originalSize.height) * scale
+            let scaledWidth = originalSize.width * imageScale
+            let scaledHeight = originalSize.height * imageScale
             return CGSize(width: scaledWidth, height: scaledHeight + 25)
         }
-        return CGSize(width: 100, height: 155)
+        return CGSize(width: 100 * scale, height: 155 * scale)
     }
     
     // MARK: - Assets
-    static let petImagePath = "/Users/xulei/Desktop/new_a.png"
+    static var petImagePath: String {
+        get { UserDefaults.standard.string(forKey: "petImagePath") ?? "/Users/xulei/Desktop/new_a.png" }
+        set { UserDefaults.standard.set(newValue, forKey: "petImagePath") }
+    }
+    
+    /// Pet 最大高度
+    static var petMaxHeight: CGFloat {
+        get { CGFloat(UserDefaults.standard.double(forKey: "petMaxHeight")) }
+        set { UserDefaults.standard.set(Double(newValue), forKey: "petMaxHeight") }
+    }
+    
+    /// Pet 缩放比例 (0.5 - 2.0)
+    static var petScale: Double {
+        get { UserDefaults.standard.double(forKey: "petScale") }
+        set { UserDefaults.standard.set(newValue, forKey: "petScale") }
+    }
     
     // MARK: - Hotkey
     static let hotkeyKeyCode: UInt16 = 0x31 // Space key
@@ -100,7 +118,10 @@ enum AppConfiguration {
             "bubbleOffsetX": 0.0,
             "bubbleOffsetY": 5.0,
             "selectedAgentId": "search",
-            "autoReadAgentName": true
+            "autoReadAgentName": true,
+            "petImagePath": "/Users/xulei/Desktop/new_a.png",
+            "petMaxHeight": 130.0,
+            "petScale": 1.0
         ]
         UserDefaults.standard.register(defaults: defaults)
     }

@@ -1,5 +1,5 @@
 // BubbleWindow.swift
-// 独立的气泡窗口 - 使用 AppKit 原生方法
+// 独立的气泡窗口 - 玻璃拟态效果
 
 import SwiftUI
 import AppKit
@@ -12,6 +12,7 @@ class BubbleWindowController: NSObject {
     private var contentViewModel = BubbleContentViewModel()
     private var hideTimer: Timer?
     private var anchorWindowRef: NSWindow?
+    private let cornerRadius: CGFloat = 16
     
     var isVisible: Bool {
         window?.isVisible ?? false
@@ -39,7 +40,7 @@ class BubbleWindowController: NSObject {
         
         // 使用动画显示
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.15
+            context.duration = 0.2
             window?.animator().alphaValue = 1.0
         }
         
@@ -53,7 +54,7 @@ class BubbleWindowController: NSObject {
         guard let window = window, window.isVisible else { return }
         
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.1
+            context.duration = 0.15
             window.animator().alphaValue = 0.0
         } completionHandler: { [weak self] in
             Task { @MainActor in
@@ -109,10 +110,33 @@ class BubbleWindowController: NSObject {
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.isMovableByWindowBackground = true
         
+        // 添加视觉特效背景（玻璃拟态）
+        applyGlassmorphism(to: window)
+        
         // 设置窗口大小策略
         window.setContentSize(NSSize(width: 280, height: 150))
         
         self.window = window
+    }
+    
+    private func applyGlassmorphism(to window: NSWindow) {
+        // 创建视觉特效视图作为背景
+        let visualEffectView = NSVisualEffectView(frame: window.contentView?.bounds ?? .zero)
+        visualEffectView.material = .popover  // 使用 popover 材质，有模糊效果
+        visualEffectView.blendingMode = .behindWindow
+        visualEffectView.state = .active
+        visualEffectView.wantsLayer = true
+        visualEffectView.layer?.cornerRadius = cornerRadius
+        visualEffectView.layer?.masksToBounds = true
+        visualEffectView.autoresizingMask = [.width, .height]
+        
+        // 添加到内容视图底层
+        if let contentView = window.contentView {
+            contentView.wantsLayer = true
+            contentView.layer?.cornerRadius = cornerRadius
+            contentView.layer?.masksToBounds = true
+            contentView.addSubview(visualEffectView, positioned: .below, relativeTo: nil)
+        }
     }
     
     private func positionNearAnchor(_ anchorWindow: NSWindow?) {
@@ -188,37 +212,29 @@ struct BubbleContentView: View {
                 Button(action: { BubbleWindowController.shared.hide() }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 16))
-                        .foregroundColor(.gray.opacity(0.6))
+                        .foregroundColor(.white.opacity(0.6))
                         .frame(width: 24, height: 24)
                 }
                 .buttonStyle(PlainButtonStyle())
-                .padding(.top, 4)
-                .padding(.trailing, 4)
+                .padding(.top, 8)
+                .padding(.trailing, 8)
             }
             
             // 内容区域
             ScrollView {
                 Text(viewModel.isEmpty ? "(等待回复...)" : viewModel.text)
-                    .font(.system(size: 14))
-                    .foregroundColor(viewModel.isEmpty ? .gray : .black)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(viewModel.isEmpty ? .white.opacity(0.6) : .white)
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: 240, alignment: .leading)
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 12)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
             }
             .frame(maxHeight: 200)
         }
         .frame(width: 280)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white)
-                .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 4)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.black.opacity(0.1), lineWidth: 1)
-                )
-        )
+        .background(Color.clear) // 透明背景，让 NSVisualEffectView 显示
     }
 }
 

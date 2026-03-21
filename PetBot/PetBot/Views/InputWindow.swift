@@ -1,5 +1,5 @@
 // InputWindow.swift
-// 输入窗口 - 修复焦点问题
+// 输入窗口 - 无边框设计 + 玻璃拟态
 
 import Cocoa
 
@@ -11,6 +11,7 @@ class InputWindowController: NSObject, NSWindowDelegate {
     private var textField: NSTextField?
     private var onSendCallback: ((String) -> Void)?
     private var focusWorkItem: DispatchWorkItem?
+    private let cornerRadius: CGFloat = 20
     
     var isVisible: Bool {
         window?.isVisible ?? false
@@ -85,68 +86,85 @@ class InputWindowController: NSObject, NSWindowDelegate {
     }
     
     private func createWindow() {
-        // 创建文本框 - 使用更可靠的配置
+        // 创建视觉特效背景
+        let visualEffectView = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 420, height: 70))
+        visualEffectView.material = .hudWindow  // HUD 材质，深色玻璃效果
+        visualEffectView.blendingMode = .behindWindow
+        visualEffectView.state = .active
+        visualEffectView.wantsLayer = true
+        visualEffectView.layer?.cornerRadius = cornerRadius
+        visualEffectView.layer?.masksToBounds = true
+        
+        // 创建文本框 - 无边框样式
         let textField = FocusAwareTextField()
         textField.placeholderString = "输入消息..."
-        textField.font = NSFont.systemFont(ofSize: 14)
+        textField.font = NSFont.systemFont(ofSize: 15, weight: .medium)
         textField.isEditable = true
         textField.isSelectable = true
         textField.bezelStyle = .roundedBezel
-        textField.focusRingType = .exterior
+        textField.focusRingType = .none  // 无边框聚焦环
+        textField.backgroundColor = NSColor.white.withAlphaComponent(0.15)
+        textField.textColor = .white
+        textField.placeholderAttributedString = NSAttributedString(
+            string: "输入消息...",
+            attributes: [
+                .foregroundColor: NSColor.white.withAlphaComponent(0.5),
+                .font: NSFont.systemFont(ofSize: 15)
+            ]
+        )
         textField.translatesAutoresizingMaskIntoConstraints = false
         textField.target = self
         textField.action = #selector(sendMessage)
         
-        // 创建按钮
+        // 圆角文本框
+        textField.wantsLayer = true
+        textField.layer?.cornerRadius = 8
+        textField.layer?.masksToBounds = true
+        
+        // 创建发送按钮
         let button = NSButton(title: "发送", target: self, action: #selector(sendMessage))
         button.bezelStyle = .rounded
         button.keyEquivalent = "\r"
+        button.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+        button.contentTintColor = .white
+        button.wantsLayer = true
+        button.layer?.backgroundColor = NSColor.systemBlue.cgColor
+        button.layer?.cornerRadius = 8
         button.translatesAutoresizingMaskIntoConstraints = false
         
-        // 容器
-        let container = NSView()
-        container.wantsLayer = true
-        container.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
-        container.layer?.cornerRadius = 12
-        container.layer?.shadowColor = NSColor.black.cgColor
-        container.layer?.shadowOpacity = 0.3
-        container.layer?.shadowRadius = 20
-        container.layer?.shadowOffset = CGSize(width: 0, height: 10)
-        container.translatesAutoresizingMaskIntoConstraints = false
-        
-        container.addSubview(textField)
-        container.addSubview(button)
+        // 添加到视觉特效视图
+        visualEffectView.addSubview(textField)
+        visualEffectView.addSubview(button)
         
         // 约束
         NSLayoutConstraint.activate([
-            container.widthAnchor.constraint(equalToConstant: 400),
-            container.heightAnchor.constraint(equalToConstant: 60),
-            
-            textField.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
-            textField.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            textField.leadingAnchor.constraint(equalTo: visualEffectView.leadingAnchor, constant: 16),
+            textField.centerYAnchor.constraint(equalTo: visualEffectView.centerYAnchor),
             textField.trailingAnchor.constraint(equalTo: button.leadingAnchor, constant: -12),
-            textField.heightAnchor.constraint(equalToConstant: 28),
+            textField.heightAnchor.constraint(equalToConstant: 36),
             
-            button.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
-            button.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            button.trailingAnchor.constraint(equalTo: visualEffectView.trailingAnchor, constant: -16),
+            button.centerYAnchor.constraint(equalTo: visualEffectView.centerYAnchor),
             button.widthAnchor.constraint(equalToConstant: 60),
-            button.heightAnchor.constraint(equalToConstant: 32)
+            button.heightAnchor.constraint(equalToConstant: 36)
         ])
         
-        // 创建窗口
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 60),
-            styleMask: [.titled, .closable],
+        // 创建无边框窗口
+        let window = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 70),
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
         
-        window.title = "发送消息"
-        window.contentView = container
+        window.contentView = visualEffectView
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.delegate = self
         window.isReleasedWhenClosed = false
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.hasShadow = true
         
         window.center()
         

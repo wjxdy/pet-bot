@@ -1,5 +1,5 @@
 // InputWindow.swift
-// 输入窗口控制器
+// 输入窗口控制器 - 豆包风格
 
 import SwiftUI
 import AppKit
@@ -7,50 +7,45 @@ import AppKit
 // MARK: - SwiftUI Input View
 struct ModernInputView: View {
     @State private var text = ""
-    let viewModel: AgentViewModel
     let onSend: (String) -> Void
     let onDismiss: () -> Void
     
     var body: some View {
-        VStack(spacing: 0) {
-            // 标题栏
-            HStack {
-                Text(viewModel.currentAgent.name)
-                    .font(.system(size: 12, weight: .medium))
-                Spacer()
-                Button(action: onDismiss) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12))
+        HStack(spacing: 12) {
+            // 输入框
+            TextField("给小米鼠发消息...", text: $text)
+                .font(.system(size: 14))
+                .textFieldStyle(PlainTextFieldStyle())
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.white.opacity(0.15))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                )
+                .onSubmit {
+                    send()
                 }
-                .buttonStyle(PlainButtonStyle())
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color.gray.opacity(0.1))
             
-            Divider()
-            
-            // 输入区域
-            HStack(spacing: 8) {
-                TextField("输入消息...", text: $text)
-                    .font(.system(size: 14))
-                    .textFieldStyle(PlainTextFieldStyle())
-                    .padding(8)
-                    .background(Color.gray.opacity(0.1))
-                    .cornerRadius(6)
-                    .onSubmit {
-                        send()
-                    }
-                
-                Button(action: send) {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 14, weight: .bold))
-                }
-                .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
+            // 发送按钮
+            Button(action: send) {
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 32, height: 32)
+                    .background(
+                        Circle()
+                            .fill(text.isEmpty ? Color.white.opacity(0.2) : Color.white.opacity(0.4))
+                    )
             }
-            .padding(12)
+            .buttonStyle(PlainButtonStyle())
+            .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
         }
-        .frame(width: AppConfiguration.inputWindowSize.width)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
     
     private func send() {
@@ -66,25 +61,21 @@ struct ModernInputView: View {
 class InputWindowController: NSObject {
     static let shared = InputWindowController()
     
-    private var window: NSWindow?
+    private var window: NSPanel?
     private var hostingController: NSHostingController<ModernInputView>?
-    private weak var viewModel: AgentViewModel?
     private var onSendCallback: ((String) -> Void)?
     
-    private let positionKey = "inputWindowPosition"
+    private let positionKey = "inputWindowPositionV2"
     
     var isVisible: Bool {
         window?.isVisible ?? false
     }
     
     func show(viewModel: AgentViewModel, onSend: @escaping (String) -> Void) {
-        self.viewModel = viewModel
         self.onSendCallback = onSend
         
         if window == nil {
             createWindow()
-        } else {
-            updateContent()
         }
         
         restorePosition()
@@ -106,10 +97,7 @@ class InputWindowController: NSObject {
     }
     
     private func createWindow() {
-        guard let viewModel = viewModel, let onSend = onSendCallback else { return }
-        
         let inputView = ModernInputView(
-            viewModel: viewModel,
             onSend: { [weak self] text in
                 self?.onSendCallback?(text)
                 self?.hide()
@@ -122,37 +110,28 @@ class InputWindowController: NSObject {
         let hostingController = NSHostingController(rootView: inputView)
         self.hostingController = hostingController
         
-        let window = NSWindow(
-            contentRect: NSRect(origin: .zero, size: AppConfiguration.inputWindowSize),
-            styleMask: [.titled, .closable],
+        // 使用 NSPanel 无边框样式，30%透明度背景
+        let window = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 60),
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
         
-        window.title = "PetBot"
+        window.contentView = hostingController.view
+        window.isOpaque = false
+        window.backgroundColor = NSColor.black.withAlphaComponent(0.3) // 30%透明度
+        window.hasShadow = true
         window.level = .floating
-        window.collectionBehavior = [.canJoinAllSpaces]
-        window.contentViewController = hostingController
-        window.isReleasedWhenClosed = false
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        window.isMovableByWindowBackground = true
+        
+        // 圆角
+        window.contentView?.wantsLayer = true
+        window.contentView?.layer?.cornerRadius = 12
+        window.contentView?.layer?.masksToBounds = true
         
         self.window = window
-    }
-    
-    private func updateContent() {
-        guard let viewModel = viewModel, let onSend = onSendCallback else { return }
-        
-        let inputView = ModernInputView(
-            viewModel: viewModel,
-            onSend: { [weak self] text in
-                self?.onSendCallback?(text)
-                self?.hide()
-            },
-            onDismiss: { [weak self] in
-                self?.hide()
-            }
-        )
-        
-        hostingController?.rootView = inputView
     }
     
     private func savePosition() {
@@ -164,8 +143,8 @@ class InputWindowController: NSObject {
         guard let window = window else { return }
         
         let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        let defaultX = screen.midX - AppConfiguration.inputWindowSize.width / 2
-        let defaultY = screen.midY - AppConfiguration.inputWindowSize.height / 2
+        let defaultX = screen.midX - 200
+        let defaultY = screen.midY - 30
         
         if let pos = UserDefaults.standard.dictionary(forKey: positionKey) as? [String: Double],
            let x = pos["x"], let y = pos["y"] {

@@ -28,7 +28,7 @@ struct PetView: View {
                     .padding(.bottom, 20)
             }
             
-            // 回复气泡 - 显示在宠物右上角
+            // 回复气泡 - 显示在宠物右上方
             if showResponseBubble && !currentResponseText.isEmpty {
                 DialogBubble(
                     text: currentResponseText,
@@ -38,7 +38,7 @@ struct PetView: View {
                         }
                     }
                 )
-                .position(x: 280, y: 120) // 右上角位置（相对于 360x400 的窗口）
+                .position(x: 260, y: 200) // 宠物右上方位置
             }
         }
         .frame(width: 360, height: 400)
@@ -94,32 +94,69 @@ struct PetImage: View {
     }
 }
 
-// 对话气泡
+// 对话气泡 - 像素风格
 struct DialogBubble: View {
     let text: String
     let onClose: () -> Void
     
     var body: some View {
-        VStack(alignment: .trailing, spacing: 4) {
+        VStack(alignment: .trailing, spacing: 6) {
+            // 关闭按钮
             Button(action: onClose) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.black)
             }
             .buttonStyle(PlainButtonStyle())
-            .padding(.trailing, 4)
+            .padding(.trailing, 6)
             
+            // 消息文本
             Text(text)
-                .font(.system(size: 13))
-                .lineSpacing(3)
-                .frame(maxWidth: 240, alignment: .leading)
+                .font(.system(size: 14))
+                .foregroundColor(.black)
+                .lineSpacing(4)
+                .frame(maxWidth: 220, alignment: .leading)
         }
-        .padding(12)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white)
-                .shadow(radius: 8)
+            ZStack {
+                // 阴影层（右下偏移）
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.black.opacity(0.2))
+                    .offset(x: 3, y: 3)
+                
+                // 主背景（白色）
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.white)
+                
+                // 黑色边框
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.black, lineWidth: 2.5)
+            }
         )
-        .frame(width: 280)
+        .frame(width: 260)
+        // 小尾巴指向宠物
+        .overlay(
+            Triangle()
+                .fill(Color.white)
+                .stroke(Color.black, lineWidth: 2.5)
+                .frame(width: 16, height: 10)
+                .rotationEffect(.degrees(180))
+                .offset(x: -60, y: 48),
+            alignment: .bottom
+        )
+    }
+}
+
+// 三角形形状（用于气泡尾巴）
+struct Triangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.closeSubpath()
+        return path
     }
 }

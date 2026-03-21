@@ -54,7 +54,7 @@ class InputWindowController: NSObject {
     private func createWindow() {
         // 创建 NSPanel - 移除 nonactivatingPanel 以支持输入
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 120),
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 80),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
@@ -76,86 +76,54 @@ class InputWindowController: NSObject {
     }
     
     private func createContentView() -> NSView {
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 120))
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 80))
         
-        // 背景 - ChatGPT 风格深色主题
+        // 背景 - 透明+阴影风格
         let background = NSView(frame: container.bounds)
         background.wantsLayer = true
-        background.layer?.backgroundColor = NSColor(calibratedWhite: 0.12, alpha: 1.0).cgColor
-        background.layer?.cornerRadius = 16
+        background.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.15).cgColor
+        background.layer?.cornerRadius = 20
         background.layer?.shadowColor = NSColor.black.cgColor
-        background.layer?.shadowOpacity = 0.4
-        background.layer?.shadowRadius = 30
-        background.layer?.shadowOffset = CGSize(width: 0, height: 10)
+        background.layer?.shadowOpacity = 0.3
+        background.layer?.shadowRadius = 20
+        background.layer?.shadowOffset = CGSize(width: 0, height: 8)
         container.addSubview(background)
         
         // Agent 颜色
         let color = agentManager?.currentAgent.color ?? .blue
         let nsColor = NSColor(color)
         
-        // 顶部栏 - 标题和关闭按钮
-        let titleBar = NSView(frame: NSRect(x: 0, y: 84, width: 400, height: 36))
-        background.addSubview(titleBar)
-        
-        // 颜色指示点
-        let colorDot = NSView(frame: NSRect(x: 16, y: 12, width: 8, height: 8))
-        colorDot.wantsLayer = true
-        colorDot.layer?.backgroundColor = nsColor.cgColor
-        colorDot.layer?.cornerRadius = 4
-        titleBar.addSubview(colorDot)
-        
-        // 标题
-        let titleLabel = NSTextField(labelWithString: agentManager?.currentAgent.name ?? "Agent")
-        titleLabel.frame = NSRect(x: 32, y: 8, width: 150, height: 20)
-        titleLabel.font = NSFont.systemFont(ofSize: 12, weight: .medium)
-        titleLabel.textColor = .white
-        titleBar.addSubview(titleLabel)
-        
-        // 关闭按钮 - 右上角
-        let closeButton = NSButton(frame: NSRect(x: 366, y: 6, width: 24, height: 24))
-        closeButton.title = ""
-        closeButton.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: nil)
-        closeButton.bezelStyle = .circular
-        closeButton.contentTintColor = .gray
-        closeButton.target = self
-        closeButton.action = #selector(closeButtonClicked)
-        titleBar.addSubview(closeButton)
-        
-        // 分隔线
-        let separator = NSView(frame: NSRect(x: 16, y: 82, width: 368, height: 1))
-        separator.wantsLayer = true
-        separator.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.1).cgColor
-        background.addSubview(separator)
-        
-        // 输入区域容器 - ChatGPT 风格
-        let inputContainer = NSView(frame: NSRect(x: 16, y: 12, width: 368, height: 60))
+        // 输入区域容器
+        let inputContainer = NSView(frame: NSRect(x: 16, y: 16, width: 368, height: 48))
         background.addSubview(inputContainer)
         
-        // 输入框外边框 - 发光效果
-        let inputBorder = NSView(frame: NSRect(x: 0, y: 0, width: 320, height: 44))
+        // 输入框背景 - 半透明白色
+        let inputBorder = NSView(frame: NSRect(x: 0, y: 0, width: 320, height: 48))
         inputBorder.wantsLayer = true
-        inputBorder.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.08).cgColor
-        inputBorder.layer?.cornerRadius = 12
-        inputBorder.layer?.borderWidth = 1
-        inputBorder.layer?.borderColor = NSColor.white.withAlphaComponent(0.15).cgColor
+        inputBorder.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.25).cgColor
+        inputBorder.layer?.cornerRadius = 24
+        inputBorder.layer?.shadowColor = NSColor.black.cgColor
+        inputBorder.layer?.shadowOpacity = 0.15
+        inputBorder.layer?.shadowRadius = 10
+        inputBorder.layer?.shadowOffset = CGSize(width: 0, height: 4)
         inputContainer.addSubview(inputBorder)
         
-        // 文本输入框 - 使用 NSTextField 创建可编辑的输入框
-        let textField = NSTextField(frame: NSRect(x: 12, y: 8, width: 296, height: 28))
+        // 文本输入框
+        let textField = NSTextField(frame: NSRect(x: 16, y: 10, width: 288, height: 28))
         textField.placeholderString = "给 Agent 发送消息..."
         textField.font = NSFont.systemFont(ofSize: 14)
         textField.textColor = .white
         textField.isBordered = false
         textField.backgroundColor = .clear
         textField.focusRingType = .none
-        textField.isEditable = true  // 关键：允许编辑
-        textField.isSelectable = true // 允许选择
+        textField.isEditable = true
+        textField.isSelectable = true
         textField.target = self
         textField.action = #selector(sendButtonClicked)
         
-        // 设置 placeholder 颜色为灰色
+        // 设置 placeholder 颜色为白色半透明
         let placeholderAttrs: [NSAttributedString.Key: Any] = [
-            .foregroundColor: NSColor.gray,
+            .foregroundColor: NSColor.white.withAlphaComponent(0.6),
             .font: NSFont.systemFont(ofSize: 14)
         ]
         textField.placeholderAttributedString = NSAttributedString(
@@ -172,14 +140,14 @@ class InputWindowController: NSObject {
         sendButton.image = NSImage(systemSymbolName: "arrow.up", accessibilityDescription: nil)
         sendButton.bezelStyle = .circular
         sendButton.wantsLayer = true
-        sendButton.layer?.backgroundColor = nsColor.cgColor
+        sendButton.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.3).cgColor
         sendButton.contentTintColor = .white
         sendButton.target = self
         sendButton.action = #selector(sendButtonClicked)
         
         // 按钮阴影
-        sendButton.layer?.shadowColor = nsColor.cgColor
-        sendButton.layer?.shadowOpacity = 0.5
+        sendButton.layer?.shadowColor = NSColor.black.cgColor
+        sendButton.layer?.shadowOpacity = 0.3
         sendButton.layer?.shadowRadius = 8
         sendButton.layer?.shadowOffset = CGSize(width: 0, height: 2)
         
@@ -210,7 +178,7 @@ class InputWindowController: NSObject {
         
         let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let defaultX = screen.midX - 200  // 400/2 = 200
-        let defaultY = screen.midY - 60   // 120/2 = 60
+        let defaultY = screen.midY - 40   // 80/2 = 40
         
         if let pos = UserDefaults.standard.dictionary(forKey: positionKey) as? [String: Double],
            let x = pos["x"], let y = pos["y"] {

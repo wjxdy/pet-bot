@@ -9,11 +9,12 @@ class InputWindowController: NSObject {
     static let shared = InputWindowController()
     
     private var window: NSPanel?
-    private var textField: NSTextField?
+    private var textView: NSTextView?
+    private var placeholderLabel: NSTextField?
     private var agentManager: AgentManager?
     private var onSendCallback: ((String) -> Void)?
     
-    private let positionKey = "inputWindowPositionV3"
+    private let positionKey = "inputWindowPositionV4"
     
     var isVisible: Bool {
         return window?.isVisible ?? false
@@ -35,24 +36,30 @@ class InputWindowController: NSObject {
         // 激活应用，确保输入有效
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKey()
-        textField?.becomeFirstResponder()
+        
+        // 延迟一点再设置第一响应者，确保窗口已准备好
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.textView?.window?.makeFirstResponder(self?.textView)
+        }
     }
     
     func hide() {
         savePosition()
         window?.orderOut(nil)
-        textField?.stringValue = ""
+        textView?.string = ""
+        placeholderLabel?.isHidden = false
     }
     
     func close() {
         savePosition()
         window?.close()
         window = nil
-        textField = nil
+        textView = nil
+        placeholderLabel = nil
     }
     
     private func createWindow() {
-        // 创建 NSPanel - 移除 nonactivatingPanel 以支持输入
+        // 创建 NSPanel
         let panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 80),
             styleMask: [.borderless],
@@ -66,7 +73,7 @@ class InputWindowController: NSObject {
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isMovableByWindowBackground = true
-        panel.becomesKeyOnlyIfNeeded = false  // 确保可以成为 key window
+        panel.becomesKeyOnlyIfNeeded = false
         
         // 创建内容视图
         let contentView = createContentView()
@@ -78,10 +85,10 @@ class InputWindowController: NSObject {
     private func createContentView() -> NSView {
         let container = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 80))
         
-        // 背景 - 透明+阴影风格
+        // 背景 - 增加不透明度到 40%
         let background = NSView(frame: container.bounds)
         background.wantsLayer = true
-        background.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.15).cgColor
+        background.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.40).cgColor
         background.layer?.cornerRadius = 20
         background.layer?.shadowColor = NSColor.black.cgColor
         background.layer?.shadowOpacity = 0.3
@@ -89,81 +96,72 @@ class InputWindowController: NSObject {
         background.layer?.shadowOffset = CGSize(width: 0, height: 8)
         container.addSubview(background)
         
-        // Agent 颜色
-        let color = agentManager?.currentAgent.color ?? .blue
-        let nsColor = NSColor(color)
-        
         // 输入区域容器
         let inputContainer = NSView(frame: NSRect(x: 16, y: 16, width: 368, height: 48))
         background.addSubview(inputContainer)
         
-        // 输入框背景 - 半透明白色
-        let inputBorder = NSView(frame: NSRect(x: 0, y: 0, width: 320, height: 48))
-        inputBorder.wantsLayer = true
-        inputBorder.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.25).cgColor
-        inputBorder.layer?.cornerRadius = 24
-        inputBorder.layer?.shadowColor = NSColor.black.cgColor
-        inputBorder.layer?.shadowOpacity = 0.15
-        inputBorder.layer?.shadowRadius = 10
-        inputBorder.layer?.shadowOffset = CGSize(width: 0, height: 4)
-        inputContainer.addSubview(inputBorder)
+        // 输入框背景 - 增加不透明度到 60%
+        let inputBg = NSView(frame: NSRect(x: 0, y: 0, width: 320, height: 48))
+        inputBg.wantsLayer = true
+        inputBg.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.60).cgColor
+        inputBg.layer?.cornerRadius = 24
+        inputContainer.addSubview(inputBg)
         
-        // 文本输入框
-        let textField = NSTextField(frame: NSRect(x: 16, y: 10, width: 288, height: 28))
-        textField.placeholderString = "给 Agent 发送消息..."
-        textField.font = NSFont.systemFont(ofSize: 14)
-        textField.textColor = .white
-        textField.isBordered = false
-        textField.backgroundColor = .clear
-        textField.focusRingType = .none
-        textField.isEditable = true
-        textField.isSelectable = true
-        textField.target = self
-        textField.action = #selector(sendButtonClicked)
+        // 使用 NSScrollView + NSTextView 确保可编辑
+        let scrollView = NSScrollView(frame: NSRect(x: 16, y: 10, width: 288, height: 28))
+        scrollView.hasVerticalScroller = false
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.borderType = .noBorder
+        scrollView.backgroundColor = .clear
         
-        // 设置 placeholder 颜色为白色半透明
-        let placeholderAttrs: [NSAttributedString.Key: Any] = [
-            .foregroundColor: NSColor.white.withAlphaComponent(0.6),
-            .font: NSFont.systemFont(ofSize: 14)
-        ]
-        textField.placeholderAttributedString = NSAttributedString(
-            string: "给 Agent 发送消息...",
-            attributes: placeholderAttrs
-        )
+        let textView = NSTextView(frame: NSRect(x: 0, y: 0, width: 288, height: 28))
+        textView.isEditable = true
+        textView.isSelectable = true
+        textView.isRichText = false
+        textView.font = NSFont.systemFont(ofSize: 14)
+        textView.textColor = .white
+        textView.backgroundColor = .clear
+        textView.insertionPointColor = .white
+        textView.focusRingType = .none
+        textView.delegate = self
         
-        inputBorder.addSubview(textField)
-        self.textField = textField
+        scrollView.documentView = textView
+        inputBg.addSubview(scrollView)
+        self.textView = textView
         
-        // 发送按钮 - 右侧圆形按钮
+        // Placeholder 标签
+        let placeholder = NSTextField(labelWithString: "给 Agent 发送消息...")
+        placeholder.frame = NSRect(x: 20, y: 14, width: 280, height: 20)
+        placeholder.font = NSFont.systemFont(ofSize: 14)
+        placeholder.textColor = NSColor.white.withAlphaComponent(0.6)
+        placeholder.backgroundColor = .clear
+        placeholder.isBordered = false
+        placeholder.isSelectable = false
+        inputBg.addSubview(placeholder)
+        self.placeholderLabel = placeholder
+        
+        // 发送按钮
         let sendButton = NSButton(frame: NSRect(x: 332, y: 6, width: 36, height: 36))
         sendButton.title = ""
         sendButton.image = NSImage(systemSymbolName: "arrow.up", accessibilityDescription: nil)
         sendButton.bezelStyle = .circular
         sendButton.wantsLayer = true
-        sendButton.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.3).cgColor
+        sendButton.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.5).cgColor
         sendButton.contentTintColor = .white
         sendButton.target = self
         sendButton.action = #selector(sendButtonClicked)
-        
-        // 按钮阴影
-        sendButton.layer?.shadowColor = NSColor.black.cgColor
-        sendButton.layer?.shadowOpacity = 0.3
-        sendButton.layer?.shadowRadius = 8
-        sendButton.layer?.shadowOffset = CGSize(width: 0, height: 2)
-        
         inputContainer.addSubview(sendButton)
         
         return container
     }
     
-    @objc private func closeButtonClicked() {
-        hide()
-    }
-    
     @objc private func sendButtonClicked() {
-        guard let text = textField?.stringValue, !text.isEmpty else { return }
+        let text = textView?.string.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !text.isEmpty else { return }
         onSendCallback?(text)
-        textField?.stringValue = ""
+        textView?.string = ""
+        placeholderLabel?.isHidden = false
         hide()
     }
     
@@ -177,8 +175,8 @@ class InputWindowController: NSObject {
         guard let win = window else { return }
         
         let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        let defaultX = screen.midX - 200  // 400/2 = 200
-        let defaultY = screen.midY - 40   // 80/2 = 40
+        let defaultX = screen.midX - 200
+        let defaultY = screen.midY - 40
         
         if let pos = UserDefaults.standard.dictionary(forKey: positionKey) as? [String: Double],
            let x = pos["x"], let y = pos["y"] {
@@ -186,6 +184,29 @@ class InputWindowController: NSObject {
         } else {
             win.setFrameOrigin(NSPoint(x: defaultX, y: defaultY))
         }
+    }
+}
+
+// MARK: - NSTextViewDelegate
+extension InputWindowController: NSTextViewDelegate {
+    func textDidChange(_ notification: Notification) {
+        guard let textView = notification.object as? NSTextView else { return }
+        placeholderLabel?.isHidden = !textView.string.isEmpty
+    }
+    
+    func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        // 检测回车键
+        if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+            let text = textView.string.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !text.isEmpty {
+                onSendCallback?(text)
+                textView.string = ""
+                placeholderLabel?.isHidden = false
+                hide()
+            }
+            return true
+        }
+        return false
     }
 }
 

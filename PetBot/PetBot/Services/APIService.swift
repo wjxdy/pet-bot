@@ -45,21 +45,24 @@ actor OpenClawAPIService: APIServiceProtocol {
     }
     
     func sendMessage(_ message: String, agentId: String) async throws -> String {
-        let endpoint = "\(baseURL)/agent"
+        // 使用 OpenClaw HTTP API 调用 agent
+        let endpoint = "\(baseURL)/v1/chat"
         
         guard let url = URL(string: endpoint) else {
             throw APIError.invalidURL
         }
         
-        let requestBody = OpenClawRequest(
-            message: message,
-            agent: agentId
-        )
+        // OpenClaw API 格式
+        let requestBody: [String: Any] = [
+            "message": message,
+            "agent_id": agentId,
+            "session_id": "petbot-\(UUID().uuidString.prefix(8))"
+        ]
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(requestBody)
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
         
         AppLogger.info("发送请求到: \(endpoint), agent: \(agentId)")
         
@@ -70,6 +73,10 @@ actor OpenClawAPIService: APIServiceProtocol {
         }
         
         AppLogger.info("收到响应: HTTP \(httpResponse.statusCode)")
+        
+        if let responseString = String(data: data, encoding: .utf8) {
+            AppLogger.info("响应内容: \(responseString.prefix(200))...")
+        }
         
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"

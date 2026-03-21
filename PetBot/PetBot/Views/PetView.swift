@@ -62,13 +62,26 @@ struct PetView: View {
         Task {
             await viewModel.sendMessage(message)
             
-            // 显示最后一个非用户消息
-            if let lastMessage = viewModel.messages.last(where: { !$0.isUser }) {
-                await MainActor.run {
+            // 延迟一下确保消息已更新
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1秒
+            
+            await MainActor.run {
+                // 显示最后一个非用户消息
+                if let lastMessage = viewModel.messages.last(where: { !$0.isUser }) {
                     lastResponse = lastMessage.content
                     withAnimation {
                         showBubble = true
                     }
+                    AppLogger.success("显示气泡: \(lastResponse.prefix(50))...")
+                } else if let error = viewModel.errorMessage {
+                    // 显示错误信息
+                    lastResponse = "❌ \(error)"
+                    withAnimation {
+                        showBubble = true
+                    }
+                    AppLogger.error("显示错误: \(error)")
+                } else {
+                    AppLogger.error("没有消息可显示")
                 }
             }
         }

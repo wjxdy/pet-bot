@@ -12,6 +12,9 @@ enum AppConfiguration {
         "http://\(gatewayHost):\(gatewayPort)"
     }
     
+    // MARK: - Default Agent
+    static let defaultAgentId = "search" // 小米鼠
+    
     // MARK: - UI Configuration
     static let petWindowSize = CGSize(width: 360, height: 400)
     static let inputWindowSize = CGSize(width: 300, height: 100)

@@ -19,28 +19,28 @@ struct Agent: Identifiable, Codable, Equatable {
 // MARK: - Default Agents
 extension Agent {
     static let `default` = Agent(
-        id: "shennong",
-        name: "神农",
-        description: "AI 功能实验师，冷静严谨",
-        colorHex: "#FF6B35",
-        icon: "🌿"
+        id: "search",
+        name: "小米鼠",
+        description: "擅长信息检索",
+        colorHex: "#FF9500",
+        icon: "🐭"
     )
     
     static let all: [Agent] = [
         .default,
+        Agent(
+            id: "shennong",
+            name: "神农",
+            description: "AI 功能实验师",
+            colorHex: "#FF6B35",
+            icon: "🌿"
+        ),
         Agent(
             id: "main",
             name: "主助手",
             description: "通用 AI 助手",
             colorHex: "#007AFF",
             icon: "🤖"
-        ),
-        Agent(
-            id: "search",
-            name: "搜索专家",
-            description: "擅长信息检索",
-            colorHex: "#34C759",
-            icon: "🔍"
         ),
         Agent(
             id: "claude",

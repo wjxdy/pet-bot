@@ -1,19 +1,73 @@
 // InputWindow.swift
-// 输入框窗口控制器 - 使用原生 AppKit 确保可输入
+// 输入框窗口控制器 - 使用 SwiftUI TextField 嵌入 AppKit
 
 import SwiftUI
 import AppKit
 
+// SwiftUI 输入视图
+struct InputView: View {
+    @State private var text = ""
+    var onSend: (String) -> Void
+    var onDismiss: () -> Void
+    var agentName: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // 输入框
+            TextField("给 \(agentName) 发送消息...", text: $text)
+                .font(.system(size: 14))
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(
+                    Capsule()
+                        .fill(Color.white.opacity(0.6))
+                )
+                .onSubmit {
+                    send()
+                }
+            
+            // 发送按钮
+            Button(action: send) {
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle()
+                            .fill(Color.white.opacity(0.5))
+                    )
+            }
+            .buttonStyle(PlainButtonStyle())
+            .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color.white.opacity(0.40))
+                .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 8)
+        )
+    }
+    
+    private func send() {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        onSend(trimmed)
+        text = ""
+    }
+}
+
 @MainActor
-class InputWindowController: NSObject, NSTextFieldDelegate {
+class InputWindowController: NSObject {
     static let shared = InputWindowController()
     
     private var window: NSWindow?
-    private var textField: NSTextField?
+    private var hostingController: NSHostingController<InputView>?
     private var agentManager: AgentManager?
     private var onSendCallback: ((String) -> Void)?
     
-    private let positionKey = "inputWindowPositionV6"
+    private let positionKey = "inputWindowPositionV7"
     
     var isVisible: Bool {
         return window?.isVisible ?? false
@@ -27,67 +81,48 @@ class InputWindowController: NSObject, NSTextFieldDelegate {
             createWindow()
         }
         
-        updatePlaceholder()
+        // 更新 hosting controller 中的 agentName
+        updateHostingController()
+        
         restorePosition()
         
         guard let window = window else { return }
         
-        // 关键：先激活应用
+        // 激活应用并显示窗口
         NSApp.activate(ignoringOtherApps: true)
-        
-        // 显示窗口并确保它成为 key window
         window.makeKeyAndOrderFront(nil)
-        
-        // 强制让窗口成为第一响应者
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self, let window = self.window, let textField = self.textField else { return }
-            
-            // 关键步骤：确保窗口是 key window
-            if !window.isKeyWindow {
-                window.makeKey()
-            }
-            
-            // 设置第一响应者
-            window.makeFirstResponder(textField)
-            
-            // 额外：确保 text field 是 editable 的
-            textField.isEditable = true
-            textField.isSelectable = true
-            textField.isEnabled = true
-            
-            // 刷新
-            textField.needsDisplay = true
-            textField.window?.update()
-        }
     }
     
     func hide() {
         savePosition()
         window?.orderOut(nil)
-        textField?.stringValue = ""
     }
     
     func close() {
         savePosition()
         window?.close()
         window = nil
-        textField = nil
-    }
-    
-    private func updatePlaceholder() {
-        guard let textField = textField else { return }
-        let placeholderAttrs: [NSAttributedString.Key: Any] = [
-            .foregroundColor: NSColor.white.withAlphaComponent(0.5),
-            .font: NSFont.systemFont(ofSize: 14)
-        ]
-        textField.placeholderAttributedString = NSAttributedString(
-            string: "给 \(agentManager?.currentAgent.name ?? "Agent") 发送消息...",
-            attributes: placeholderAttrs
-        )
+        hostingController = nil
     }
     
     private func createWindow() {
-        // 关键：使用 NSWindow 而不是 NSPanel，确保可以正常接收输入
+        // 创建 SwiftUI 视图
+        let inputView = InputView(
+            onSend: { [weak self] text in
+                self?.onSendCallback?(text)
+                self?.hide()
+            },
+            onDismiss: { [weak self] in
+                self?.hide()
+            },
+            agentName: agentManager?.currentAgent.name ?? "Agent"
+        )
+        
+        // 创建 hosting controller
+        let hostingController = NSHostingController(rootView: inputView)
+        self.hostingController = hostingController
+        
+        // 创建窗口
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 80),
             styleMask: [.borderless],
@@ -101,115 +136,26 @@ class InputWindowController: NSObject, NSTextFieldDelegate {
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.isMovableByWindowBackground = true
-        
-        // 关键：接受鼠标事件
-        window.ignoresMouseEvents = false
-        
-        // 创建内容视图
-        let contentView = createContentView()
-        window.contentView = contentView
+        window.contentViewController = hostingController
         
         self.window = window
     }
     
-    private func createContentView() -> NSView {
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 80))
+    private func updateHostingController() {
+        guard let onSend = onSendCallback else { return }
         
-        // 背景 - 40% 不透明
-        let background = NSView(frame: container.bounds)
-        background.wantsLayer = true
-        background.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.40).cgColor
-        background.layer?.cornerRadius = 20
-        background.layer?.shadowColor = NSColor.black.cgColor
-        background.layer?.shadowOpacity = 0.3
-        background.layer?.shadowRadius = 20
-        background.layer?.shadowOffset = CGSize(width: 0, height: 8)
-        container.addSubview(background)
-        
-        // 输入区域容器
-        let inputContainer = NSView(frame: NSRect(x: 16, y: 16, width: 368, height: 48))
-        background.addSubview(inputContainer)
-        
-        // 输入框背景 - 60% 不透明
-        let inputBg = NSView(frame: NSRect(x: 0, y: 0, width: 320, height: 48))
-        inputBg.wantsLayer = true
-        inputBg.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.60).cgColor
-        inputBg.layer?.cornerRadius = 24
-        inputContainer.addSubview(inputBg)
-        
-        // 关键：创建一个可以接收点击的容器视图
-        let clickHandler = ClickableView(frame: NSRect(x: 0, y: 0, width: 320, height: 48))
-        clickHandler.onClick = { [weak self] in
-            self?.focusTextField()
-        }
-        inputBg.addSubview(clickHandler)
-        
-        // 创建 NSTextField
-        let textField = NSTextField(frame: NSRect(x: 16, y: 10, width: 288, height: 28))
-        textField.delegate = self
-        textField.font = NSFont.systemFont(ofSize: 14)
-        textField.textColor = .white
-        textField.backgroundColor = .clear
-        textField.isBordered = false
-        textField.focusRingType = .none
-        textField.usesSingleLineMode = true
-        textField.lineBreakMode = .byTruncatingTail
-        textField.isEditable = true
-        textField.isSelectable = true
-        textField.isEnabled = true
-        
-        // 占位符
-        let placeholderAttrs: [NSAttributedString.Key: Any] = [
-            .foregroundColor: NSColor.white.withAlphaComponent(0.5),
-            .font: NSFont.systemFont(ofSize: 14)
-        ]
-        textField.placeholderAttributedString = NSAttributedString(
-            string: "发送消息...",
-            attributes: placeholderAttrs
+        let inputView = InputView(
+            onSend: { [weak self] text in
+                self?.onSendCallback?(text)
+                self?.hide()
+            },
+            onDismiss: { [weak self] in
+                self?.hide()
+            },
+            agentName: agentManager?.currentAgent.name ?? "Agent"
         )
         
-        inputBg.addSubview(textField)
-        self.textField = textField
-        
-        // 发送按钮
-        let sendButton = NSButton(frame: NSRect(x: 332, y: 6, width: 36, height: 36))
-        sendButton.title = ""
-        sendButton.image = NSImage(systemSymbolName: "arrow.up", accessibilityDescription: nil)
-        sendButton.bezelStyle = .circular
-        sendButton.wantsLayer = true
-        sendButton.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.5).cgColor
-        sendButton.contentTintColor = .white
-        sendButton.target = self
-        sendButton.action = #selector(sendButtonClicked)
-        inputContainer.addSubview(sendButton)
-        
-        return container
-    }
-    
-    private func focusTextField() {
-        guard let window = window, let textField = textField else { return }
-        window.makeKey()
-        window.makeFirstResponder(textField)
-        textField.becomeFirstResponder()
-    }
-    
-    // MARK: - NSTextFieldDelegate
-    
-    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
-        if commandSelector == #selector(NSResponder.insertNewline(_:)) {
-            sendButtonClicked()
-            return true
-        }
-        return false
-    }
-    
-    @objc private func sendButtonClicked() {
-        guard let textField = textField else { return }
-        let text = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
-        onSendCallback?(text)
-        textField.stringValue = ""
-        hide()
+        hostingController?.rootView = inputView
     }
     
     private func savePosition() {
@@ -231,15 +177,6 @@ class InputWindowController: NSObject, NSTextFieldDelegate {
         } else {
             win.setFrameOrigin(NSPoint(x: defaultX, y: defaultY))
         }
-    }
-}
-
-// 可点击视图 - 用于捕获点击事件
-class ClickableView: NSView {
-    var onClick: (() -> Void)?
-    
-    override func mouseDown(with event: NSEvent) {
-        onClick?()
     }
 }
 

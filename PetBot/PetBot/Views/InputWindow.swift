@@ -1,99 +1,14 @@
 // InputWindow.swift
-// 输入窗口 - 确保可输入
+// 输入窗口 - 使用标准窗口确保可输入
 
 import SwiftUI
 import AppKit
 
-struct InputContainerView: View {
-    let onSend: (String) -> Void
-    
-    var body: some View {
-        InputFieldRepresentable(onSend: onSend)
-            .padding(16)
-            .background(Color.white)
-            .cornerRadius(12)
-            .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 5)
-            .frame(width: 400, height: 70)
-    }
-}
-
-// 使用 NSRepresentable 确保原生输入
-struct InputFieldRepresentable: NSViewRepresentable {
-    let onSend: (String) -> Void
-    
-    func makeNSView(context: Context) -> NSView {
-        let container = NSView()
-        
-        // 创建 NSTextField
-        let textField = NSTextField()
-        textField.placeholderString = "输入消息..."
-        textField.font = NSFont.systemFont(ofSize: 14)
-        textField.isEditable = true
-        textField.isSelectable = true
-        textField.focusRingType = .default
-        textField.bezelStyle = .roundedBezel
-        textField.target = context.coordinator
-        textField.action = #selector(Coordinator.submit)
-        
-        // 创建发送按钮
-        let button = NSButton(title: "发送", target: context.coordinator, action: #selector(Coordinator.submit))
-        button.bezelStyle = .rounded
-        button.keyEquivalent = "\r" // 回车键
-        
-        // 布局
-        textField.translatesAutoresizingMaskIntoConstraints = false
-        button.translatesAutoresizingMaskIntoConstraints = false
-        
-        container.addSubview(textField)
-        container.addSubview(button)
-        
-        NSLayoutConstraint.activate([
-            textField.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            textField.topAnchor.constraint(equalTo: container.topAnchor),
-            textField.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            textField.trailingAnchor.constraint(equalTo: button.leadingAnchor, constant: -8),
-            
-            button.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            button.topAnchor.constraint(equalTo: container.topAnchor),
-            button.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            button.widthAnchor.constraint(equalToConstant: 60)
-        ])
-        
-        context.coordinator.textField = textField
-        context.coordinator.onSend = onSend
-        
-        // 延迟设置焦点
-        DispatchQueue.main.async {
-            textField.window?.makeFirstResponder(textField)
-        }
-        
-        return container
-    }
-    
-    func updateNSView(_ nsView: NSView, context: Context) {}
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
-    
-    class Coordinator: NSObject {
-        weak var textField: NSTextField?
-        var onSend: ((String) -> Void)?
-        
-        @objc func submit() {
-            guard let text = textField?.stringValue.trimmingCharacters(in: .whitespaces),
-                  !text.isEmpty else { return }
-            onSend?(text)
-            textField?.stringValue = ""
-        }
-    }
-}
-
-@MainActor
-class InputWindowController: NSObject {
+class InputWindowController: NSObject, NSWindowDelegate {
     static let shared = InputWindowController()
     
-    private var window: NSPanel?
+    private var window: NSWindow?
+    private var textField: NSTextField?
     private var onSendCallback: ((String) -> Void)?
     
     var isVisible: Bool {
@@ -107,8 +22,14 @@ class InputWindowController: NSObject {
             createWindow()
         }
         
+        // 激活应用并显示窗口
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
+        
+        // 延迟设置焦点
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.textField?.becomeFirstResponder()
+        }
     }
     
     func hide() {
@@ -118,33 +39,85 @@ class InputWindowController: NSObject {
     func close() {
         window?.close()
         window = nil
+        textField = nil
     }
     
     private func createWindow() {
-        let contentView = InputContainerView { [weak self] text in
-            self?.onSendCallback?(text)
-            self?.hide()
-        }
+        // 创建容器视图
+        let containerView = NSView()
+        containerView.wantsLayer = true
+        containerView.layer?.backgroundColor = NSColor.white.cgColor
+        containerView.layer?.cornerRadius = 12
+        containerView.layer?.shadowColor = NSColor.black.cgColor
+        containerView.layer?.shadowOpacity = 0.2
+        containerView.layer?.shadowRadius = 15
+        containerView.layer?.shadowOffset = CGSize(width: 0, height: 5)
         
-        let hostingController = NSHostingController(rootView: contentView)
+        // 创建文本框
+        let textField = NSTextField()
+        textField.placeholderString = "输入消息..."
+        textField.font = NSFont.systemFont(ofSize: 14)
+        textField.isEditable = true
+        textField.isSelectable = true
+        textField.bezelStyle = .roundedBezel
+        textField.translatesAutoresizingMaskIntoConstraints = false
         
-        let window = NSPanel(
+        // 创建发送按钮
+        let button = NSButton(title: "发送", target: self, action: #selector(sendMessage))
+        button.bezelStyle = .rounded
+        button.keyEquivalent = "\r"
+        button.translatesAutoresizingMaskIntoConstraints = false
+        
+        // 添加到容器
+        containerView.addSubview(textField)
+        containerView.addSubview(button)
+        
+        // 布局
+        NSLayoutConstraint.activate([
+            textField.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
+            textField.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 16),
+            textField.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -16),
+            textField.trailingAnchor.constraint(equalTo: button.leadingAnchor, constant: -8),
+            
+            button.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            button.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 16),
+            button.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -16),
+            button.widthAnchor.constraint(equalToConstant: 60)
+        ])
+        
+        // 创建窗口 - 使用标准 NSWindow 而不是 NSPanel
+        let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 70),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
         )
         
-        window.contentView = hostingController.view
+        window.contentView = containerView
         window.isOpaque = false
         window.backgroundColor = .clear
-        window.hasShadow = true
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.isMovableByWindowBackground = true
+        window.delegate = self
         
+        // 居中显示
         window.center()
         
         self.window = window
+        self.textField = textField
+    }
+    
+    @objc private func sendMessage() {
+        guard let text = textField?.stringValue.trimmingCharacters(in: .whitespaces),
+              !text.isEmpty else { return }
+        onSendCallback?(text)
+        textField?.stringValue = ""
+        hide()
+    }
+    
+    func windowDidBecomeKey(_ notification: Notification) {
+        // 窗口成为 key window 时设置焦点
+        textField?.becomeFirstResponder()
     }
 }

@@ -38,14 +38,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func setupPetWindow() {
-        let contentView = PetView(petWindow: nil)
-        
+        // 先创建窗口
         petWindow = PetWindow(
             contentRect: NSRect(origin: .zero, size: AppConfiguration.petWindowSize),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
         )
+        
+        // 再创建视图，传入窗口引用
+        let contentView = PetView(petWindow: petWindow)
         
         petWindow?.contentView = NSHostingView(rootView: contentView)
         petWindow?.makeKeyAndOrderFront(nil)

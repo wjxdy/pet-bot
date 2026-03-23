@@ -26,7 +26,8 @@ class SettingsWindowController: NSWindowController {
         // 计算内容高度（根据 agent 数量）
         let agentCount = viewModel.availableAgents.count
         let contentHeight: CGFloat = 620 + CGFloat(agentCount * 35)  // 增加基础高度
-        let windowHeight: CGFloat = min(600, contentHeight)
+        // 窗口高度最小 500，最大 700，确保有足够空间滚动
+        let windowHeight: CGFloat = min(700, max(500, contentHeight))
         
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 480, height: windowHeight),
@@ -36,17 +37,19 @@ class SettingsWindowController: NSWindowController {
         )
         window.title = "PetBot 设置"
         window.center()
+        // 减小最小高度限制，允许更灵活的窗口大小
         window.minSize = NSSize(width: 480, height: 400)
         
-        // 创建滚动视图
+        // 创建滚动视图 - 留出底部50px给完成按钮
         let scrollView = NSScrollView(frame: NSRect(x: 0, y: 50, width: 480, height: windowHeight - 50))
         scrollView.autoresizingMask = [.width, .height]
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
-        scrollView.autohidesScrollers = true
+        scrollView.autohidesScrollers = false  // 始终显示滚动条
         scrollView.borderType = .noBorder
+        scrollView.backgroundColor = .clear
         
-        // 创建文档视图（内容容器）
+        // 创建文档视图（内容容器）- 使用预估高度
         let documentView = NSView(frame: NSRect(x: 0, y: 0, width: 460, height: contentHeight))
         documentView.autoresizesSubviews = true
         
@@ -338,15 +341,16 @@ class SettingsWindowController: NSWindowController {
         
         y -= 20
         
-        // 调整文档视图高度
-        let actualHeight = contentHeight - y + 50
+        // 调整文档视图高度 - 确保包含所有内容
+        let actualHeight = max(contentHeight - y + 50, windowHeight - 50)
         documentView.frame = NSRect(x: 0, y: 0, width: 460, height: actualHeight)
         
         // 设置文档视图
         scrollView.documentView = documentView
         
-        // 滚动到顶部
-        scrollView.contentView.scroll(to: NSPoint(x: 0, y: actualHeight - scrollView.contentView.bounds.height))
+        // 确保滚动条刷新
+        scrollView.needsLayout = true
+        scrollView.needsDisplay = true
         
         // 创建容器视图
         let containerView = NSView(frame: NSRect(x: 0, y: 0, width: 480, height: windowHeight))

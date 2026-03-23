@@ -57,6 +57,13 @@ else
     echo "📦 PetBot 已安装"
 fi
 
+# 显示安装位置
+echo ""
+echo "📁 安装位置: ${APP_DIR}"
+echo "   可执行文件: ${APP_DIR}/PetBot.app/Contents/MacOS/PetBot"
+echo "   启动脚本: ${APP_DIR}/petbot.sh"
+echo ""
+
 # 检查是否已在运行
 if pgrep -x "PetBot" > /dev/null; then
     echo "⚠️  PetBot 已经在运行"

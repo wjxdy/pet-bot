@@ -60,6 +60,57 @@ swift run
 - **设置窗口** - 可配置自动消失时间、位置、Agent 选择
 - **历史窗口** - 像素 RPG 风格，可查看所有聊天记录
 
+## ❓ 常见问题
+
+### Q: 安装后如何再次打开？
+
+**A:** 有以下几种方式：
+
+**方法 1：再次运行安装脚本（推荐）**
+```bash
+bash <(curl -s https://raw.githubusercontent.com/wjxdy/pet-bot/master/install.sh)
+```
+脚本会检测到已安装，直接启动。
+
+**方法 2：直接运行本地脚本**
+```bash
+~/.petbot/petbot.sh
+```
+
+**方法 3：直接运行可执行文件**
+```bash
+~/.petbot/PetBot.app/Contents/MacOS/PetBot
+```
+
+**方法 4：从 Applications 启动（如果手动移动过）**
+```bash
+open /Applications/PetBot.app
+```
+
+### Q: 找不到 ~/.petbot 文件夹？
+
+**A:** 这是一个隐藏文件夹（以点开头的都是隐藏文件夹）。在 Finder 中按 `Cmd + Shift + .` 可以显示隐藏文件。
+
+或者直接在终端运行：
+```bash
+ls -la ~/.petbot
+```
+
+### Q: 提示"App 已损坏"怎么办？
+
+**A:** 这是 macOS 的安全机制。运行以下命令：
+```bash
+xattr -cr ~/.petbot/PetBot.app
+```
+然后重新启动。
+
+### Q: 如何修改 OpenClaw 路径？
+
+**A:** 
+1. 打开 PetBot 设置（菜单栏 → PetBot → 设置...）
+2. 修改 "OpenClaw 路径" 为实际安装位置
+3. 常见路径：`~/.openclaw`、`/usr/local`、`/opt/homebrew`
+
 ## 📝 更新日志
 
 ### v1.1.0 (2026-03-23)

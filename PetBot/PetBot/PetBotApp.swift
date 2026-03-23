@@ -8,6 +8,12 @@ import AppKit
 struct PetBotApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
+    init() {
+        // 强制使用中文 - 在应用启动最早期设置
+        UserDefaults.standard.set(["zh-Hans"], forKey: "AppleLanguages")
+        UserDefaults.standard.synchronize()
+    }
+    
     var body: some Scene {
         Settings {
             EmptyView()
@@ -23,10 +29,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppLogger.info("PetBot 启动中...")
-        
-        // 强制使用中文
-        UserDefaults.standard.set(["zh-Hans"], forKey: "AppleLanguages")
-        UserDefaults.standard.synchronize()
         
         // 注册默认配置
         AppConfiguration.registerDefaults()

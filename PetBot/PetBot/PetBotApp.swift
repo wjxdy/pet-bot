@@ -231,18 +231,42 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func openChatHistory() {
         print("[Debug] openChatHistory called")
         print("[Debug] viewModel.availableAgents.count = \(viewModel.availableAgents.count)")
-        ChatHistoryManager.show(viewModel: viewModel)
+        
+        // 确保在主线程执行
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else {
+                print("[Error] self is nil in openChatHistory")
+                return
+            }
+            
+            ChatHistoryManager.show(viewModel: self.viewModel)
+        }
     }
     
     @objc private func openSettings() {
         print("[Debug] openSettings called")
         print("[Debug] SettingsWindowController.shared = \(String(describing: SettingsWindowController.shared))")
-        if SettingsWindowController.shared == nil {
+        print("[Debug] viewModel.availableAgents.count = \(viewModel.availableAgents.count)")
+        
+        // 确保在主线程执行
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else {
+                print("[Error] self is nil in openSettings")
+                return
+            }
+            
+            // 如果已存在窗口，直接显示
+            if let existingController = SettingsWindowController.shared {
+                print("[Debug] Showing existing settings window")
+                existingController.showWindow(nil)
+                return
+            }
+            
+            // 创建新窗口
+            print("[Debug] Creating new settings window")
             let controller = SettingsWindowController()
-            controller.setup(with: viewModel)
+            controller.setup(with: self.viewModel)
             controller.showSettings()
-        } else {
-            SettingsWindowController.shared?.showWindow(nil)
         }
     }
     

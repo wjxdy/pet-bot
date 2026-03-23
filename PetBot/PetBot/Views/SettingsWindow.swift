@@ -8,6 +8,14 @@ class SettingsWindowController: NSWindowController {
     
     private var viewModel: AgentViewModel!
     
+    override init(window: NSWindow?) {
+        super.init(window: window)
+    }
+    
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+    }
+    
     func setup(with viewModel: AgentViewModel) {
         self.viewModel = viewModel
     }

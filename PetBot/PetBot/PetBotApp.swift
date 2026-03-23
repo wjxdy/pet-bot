@@ -24,6 +24,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppLogger.info("PetBot 启动中...")
         
+        // 强制使用中文
+        UserDefaults.standard.set(["zh-Hans"], forKey: "AppleLanguages")
+        UserDefaults.standard.synchronize()
+        
         // 注册默认配置
         AppConfiguration.registerDefaults()
         
@@ -69,7 +73,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu(title: "PetBot")
         
         // 关于
-        menu.addItem(NSMenuItem(title: "关于 PetBot", action: #selector(showAbout), keyEquivalent: ""))
+        let aboutItem = NSMenuItem(title: "关于 PetBot", action: #selector(showAbout), keyEquivalent: "")
+        aboutItem.target = self
+        menu.addItem(aboutItem)
         menu.addItem(NSMenuItem.separator())
         
         // 聊天历史
@@ -81,6 +87,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 设置
         let settingsItem = NSMenuItem(title: "设置...", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.keyEquivalentModifierMask = .command
+        settingsItem.target = self
         menu.addItem(settingsItem)
         
         menu.addItem(NSMenuItem.separator())
@@ -95,6 +102,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 退出
         let quitItem = NSMenuItem(title: "退出 PetBot", action: #selector(quit), keyEquivalent: "q")
         quitItem.keyEquivalentModifierMask = .command
+        quitItem.target = self
         menu.addItem(quitItem)
         
         return menu
@@ -155,7 +163,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "显示/隐藏输入框", action: #selector(toggleInput), keyEquivalent: ""))
+        
+        let toggleItem = NSMenuItem(title: "显示/隐藏输入框", action: #selector(toggleInput), keyEquivalent: "")
+        toggleItem.target = self
+        menu.addItem(toggleItem)
         menu.addItem(NSMenuItem.separator())
         
         // Agent 切换菜单
@@ -164,6 +175,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let item = NSMenuItem(title: agent.name, action: #selector(switchAgent(_:)), keyEquivalent: "")
             item.representedObject = agent.id
             item.state = agent.id == viewModel.currentAgent.id ? .on : .off
+            item.target = self
             agentMenu.addItem(item)
         }
         
@@ -172,11 +184,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(agentItem)
         
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "打开聊天历史", action: #selector(openChatHistory), keyEquivalent: "h"))
+        
+        let historyItem = NSMenuItem(title: "打开聊天历史", action: #selector(openChatHistory), keyEquivalent: "h")
+        historyItem.target = self
+        menu.addItem(historyItem)
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "打开设置", action: #selector(openSettings), keyEquivalent: ","))
+        
+        let settingsItem = NSMenuItem(title: "打开设置", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "退出", action: #selector(quit), keyEquivalent: "q"))
+        
+        let quitItem = NSMenuItem(title: "退出", action: #selector(quit), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
         
         statusItem?.menu = menu
     }
@@ -208,12 +229,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Settings
     @objc private func openChatHistory() {
-        // 使用简化版聊天历史窗口
+        print("[Debug] openChatHistory called")
+        print("[Debug] viewModel.availableAgents.count = \(viewModel.availableAgents.count)")
         ChatHistoryManager.show(viewModel: viewModel)
     }
     
     @objc private func openSettings() {
-        // 使用静态共享实例避免被释放
+        print("[Debug] openSettings called")
+        print("[Debug] SettingsWindowController.shared = \(String(describing: SettingsWindowController.shared))")
         if SettingsWindowController.shared == nil {
             let controller = SettingsWindowController()
             controller.setup(with: viewModel)

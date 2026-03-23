@@ -48,7 +48,15 @@ class MarkdownWebView: NSView {
         let script = """
         (function() {
             try {
-                var htmlContent = decodeURIComponent(escape(atob('\(base64)')));
+                // 使用 Uint8Array 正确解码 UTF-8
+                var binary = atob('\(base64)');
+                var bytes = new Uint8Array(binary.length);
+                for (var i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+                var decoder = new TextDecoder('utf-8');
+                var htmlContent = decoder.decode(bytes);
+                
                 var content = document.getElementById('content');
                 if (content) {
                     content.insertAdjacentHTML('beforeend', htmlContent);

@@ -5,6 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "PetBot",
+    defaultLocalization: "zh",
     platforms: [
         .macOS(.v14)
     ],

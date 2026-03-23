@@ -82,8 +82,22 @@ actor OpenClawAPIService: APIServiceProtocol {
     private func callOpenClawAgent(message: String, agentId: String) async throws -> String {
         AppLogger.info("调用 OpenClaw agent: \(agentId)")
         
+        // 使用配置中的 openclaw 路径
+        let openclawPath = AppConfiguration.openclawPath
+        let executablePath: String
+        if openclawPath.hasPrefix("~") {
+            executablePath = openclawPath.replacingOccurrences(of: "~", with: NSHomeDirectory()) + "/bin/openclaw"
+        } else {
+            executablePath = openclawPath + "/bin/openclaw"
+        }
+        
+        // 检查文件是否存在，回退到系统路径
+        let finalPath = FileManager.default.fileExists(atPath: executablePath) ? executablePath : "/usr/local/bin/openclaw"
+        
+        AppLogger.info("使用 OpenClaw 路径: \(finalPath)")
+        
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/local/bin/openclaw")
+        process.executableURL = URL(fileURLWithPath: finalPath)
         
         process.arguments = [
             "agent",
@@ -92,11 +106,11 @@ actor OpenClawAPIService: APIServiceProtocol {
             "--timeout", "30"
         ]
         
-        // 关键：设置正确的环境变量
+        // 设置环境变量
         var env = ProcessInfo.processInfo.environment
-        // 添加 NVM 和 Node 路径
-        env["PATH"] = "/Users/xulei/.nvm/versions/node/v22.17.0/bin:/usr/local/bin:/usr/bin:/bin"
-        env["NVM_DIR"] = "/Users/xulei/.nvm"
+        // 确保 PATH 包含必要的目录
+        let currentPath = env["PATH"] ?? ""
+        env["PATH"] = "/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin:" + currentPath
         process.environment = env
         
         let pipe = Pipe()

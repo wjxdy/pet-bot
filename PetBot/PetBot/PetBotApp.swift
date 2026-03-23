@@ -1,27 +1,10 @@
 // PetBotApp.swift
-// 应用入口
+// 应用入口 - 纯 AppKit 实现
 
 import SwiftUI
 import AppKit
 
-@main
-struct PetBotApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    
-    init() {
-        // 强制使用中文 - 必须在应用启动最早期设置
-        UserDefaults.standard.set(["zh-Hans"], forKey: "AppleLanguages")
-        UserDefaults.standard.synchronize()
-        print("[Debug] 设置语言为中文: zh-Hans")
-    }
-    
-    var body: some Scene {
-        Settings {
-            EmptyView()
-        }
-    }
-}
-
+// MARK: - App Delegate
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     var petWindow: PetWindow?
@@ -37,10 +20,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 设置应用为常规模式（显示在Dock中）
         NSApp.setActivationPolicy(.regular)
         
-        // 延迟设置菜单，确保 SwiftUI 初始化完成后再覆盖
-        DispatchQueue.main.async { [weak self] in
-            self?.setupMainMenu()
-        }
+        // 设置菜单
+        setupMainMenu()
         
         setupPetWindow()
         setupStatusBar()
@@ -56,9 +37,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Main Menu
     private func setupMainMenu() {
-        // 清除现有菜单
-        NSApp.mainMenu?.removeAllItems()
-        
         let mainMenu = NSMenu()
         
         // PetBot 菜单
@@ -77,7 +55,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         mainMenu.addItem(windowMenuItem)
         
         NSApp.mainMenu = mainMenu
-        print("[Debug] 主菜单已设置")
+        print("[Debug] 主菜单已设置，共 \(mainMenu.items.count) 个菜单项")
     }
     
     private func createAppMenu() -> NSMenu {
@@ -116,6 +94,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         quitItem.target = self
         menu.addItem(quitItem)
         
+        print("[Debug] App菜单创建完成，共 \(menu.items.count) 个菜单项")
         return menu
     }
     

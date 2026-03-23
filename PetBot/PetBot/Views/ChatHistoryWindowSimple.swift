@@ -28,7 +28,7 @@ class ChatHistoryWindow: NSWindow {
             defer: false
         )
         
-        self.title = NSLocalizedString("Chat History", comment: "Chat history window title")
+        self.title = "📜 冒险者公会 - 聊天历史"
         self.minSize = NSSize(width: 700, height: 500)
         
         // 设置窗口关闭时不释放
@@ -54,7 +54,7 @@ class ChatHistoryWindow: NSWindow {
         
         // MARK: - 左侧 Agent 列表面板
         let leftPanel = PixelPanelView(frame: NSRect(x: 0, y: 0, width: 220, height: splitView.bounds.height))
-        leftPanel.title = NSLocalizedString("Companion List", comment: "Left panel title")
+        leftPanel.title = "同伴列表"
         
         // 创建滚动视图
         let leftScrollView = NSScrollView(frame: NSRect(x: 8, y: 40, width: 204, height: leftPanel.bounds.height - 48))
@@ -103,7 +103,7 @@ class ChatHistoryWindow: NSWindow {
         
         // MARK: - 右侧聊天面板
         let rightPanel = PixelPanelView(frame: NSRect(x: 0, y: 0, width: splitView.bounds.width - 220, height: splitView.bounds.height))
-        rightPanel.title = NSLocalizedString("Conversation Records", comment: "Right panel title")
+        rightPanel.title = "对话记录"
         
         // 创建 Markdown WebView
         let markdownView = MarkdownWebView(frame: NSRect(x: 8, y: 40, width: rightPanel.bounds.width - 16, height: rightPanel.bounds.height - 48))

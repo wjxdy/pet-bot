@@ -34,7 +34,7 @@ class SettingsWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = NSLocalizedString("PetBot Settings", comment: "Settings window title")
+        window.title = "PetBot 设置"
         window.center()
         window.minSize = NSSize(width: 480, height: 400)
         

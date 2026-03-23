@@ -72,22 +72,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func createAppMenu() -> NSMenu {
-        let menu = NSMenu(title: NSLocalizedString("PetBot", comment: "App menu title"))
+        let menu = NSMenu(title: "PetBot")
         
         // 关于
-        let aboutItem = NSMenuItem(title: NSLocalizedString("About PetBot", comment: "About menu item"), action: #selector(showAbout), keyEquivalent: "")
+        let aboutItem = NSMenuItem(title: "关于 PetBot", action: #selector(showAbout), keyEquivalent: "")
         aboutItem.target = self
         menu.addItem(aboutItem)
         menu.addItem(NSMenuItem.separator())
         
         // 聊天历史
-        let chatHistoryItem = NSMenuItem(title: NSLocalizedString("Open Chat History", comment: "Chat history menu item"), action: #selector(openChatHistory), keyEquivalent: "")
+        let chatHistoryItem = NSMenuItem(title: "打开聊天历史", action: #selector(openChatHistory), keyEquivalent: "")
         chatHistoryItem.target = self
         menu.addItem(chatHistoryItem)
         menu.addItem(NSMenuItem.separator())
         
         // 设置
-        let settingsItem = NSMenuItem(title: NSLocalizedString("Settings...", comment: "Settings menu item"), action: #selector(openSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(title: "设置...", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.keyEquivalentModifierMask = .command
         settingsItem.target = self
         menu.addItem(settingsItem)
@@ -95,14 +95,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem.separator())
         
         // 隐藏
-        menu.addItem(NSMenuItem(title: NSLocalizedString("Hide PetBot", comment: "Hide menu item"), action: #selector(NSApp.hide(_:)), keyEquivalent: "h"))
-        menu.addItem(NSMenuItem(title: NSLocalizedString("Hide Others", comment: "Hide others menu item"), action: #selector(NSApp.hideOtherApplications(_:)), keyEquivalent: "h"))
-        menu.addItem(NSMenuItem(title: NSLocalizedString("Show All", comment: "Show all menu item"), action: #selector(NSApp.unhideAllApplications(_:)), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "隐藏 PetBot", action: #selector(NSApp.hide(_:)), keyEquivalent: "h"))
+        menu.addItem(NSMenuItem(title: "隐藏其他", action: #selector(NSApp.hideOtherApplications(_:)), keyEquivalent: "h"))
+        menu.addItem(NSMenuItem(title: "显示全部", action: #selector(NSApp.unhideAllApplications(_:)), keyEquivalent: ""))
         
         menu.addItem(NSMenuItem.separator())
         
         // 退出
-        let quitItem = NSMenuItem(title: NSLocalizedString("Quit PetBot", comment: "Quit menu item"), action: #selector(quit), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "退出 PetBot", action: #selector(quit), keyEquivalent: "q")
         quitItem.keyEquivalentModifierMask = .command
         quitItem.target = self
         menu.addItem(quitItem)
@@ -111,23 +111,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func createEditMenu() -> NSMenu {
-        let menu = NSMenu(title: NSLocalizedString("Edit", comment: "Edit menu title"))
-        menu.addItem(NSMenuItem(title: NSLocalizedString("Undo", comment: "Undo menu item"), action: Selector(("undo:")), keyEquivalent: "z"))
-        menu.addItem(NSMenuItem(title: NSLocalizedString("Redo", comment: "Redo menu item"), action: Selector(("redo:")), keyEquivalent: "Z"))
+        let menu = NSMenu(title: "编辑")
+        menu.addItem(NSMenuItem(title: "撤销", action: Selector(("undo:")), keyEquivalent: "z"))
+        menu.addItem(NSMenuItem(title: "重做", action: Selector(("redo:")), keyEquivalent: "Z"))
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: NSLocalizedString("Cut", comment: "Cut menu item"), action: #selector(NSText.cut(_:)), keyEquivalent: "x"))
-        menu.addItem(NSMenuItem(title: NSLocalizedString("Copy", comment: "Copy menu item"), action: #selector(NSText.copy(_:)), keyEquivalent: "c"))
-        menu.addItem(NSMenuItem(title: NSLocalizedString("Paste", comment: "Paste menu item"), action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
-        menu.addItem(NSMenuItem(title: NSLocalizedString("Select All", comment: "Select all menu item"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
+        menu.addItem(NSMenuItem(title: "剪切", action: #selector(NSText.cut(_:)), keyEquivalent: "x"))
+        menu.addItem(NSMenuItem(title: "复制", action: #selector(NSText.copy(_:)), keyEquivalent: "c"))
+        menu.addItem(NSMenuItem(title: "粘贴", action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
+        menu.addItem(NSMenuItem(title: "全选", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
         return menu
     }
     
     private func createWindowMenu() -> NSMenu {
-        let menu = NSMenu(title: NSLocalizedString("Window", comment: "Window menu title"))
-        menu.addItem(NSMenuItem(title: NSLocalizedString("Minimize", comment: "Minimize menu item"), action: #selector(NSWindow.miniaturize(_:)), keyEquivalent: "m"))
-        menu.addItem(NSMenuItem(title: NSLocalizedString("Close", comment: "Close menu item"), action: #selector(NSWindow.close), keyEquivalent: "w"))
+        let menu = NSMenu(title: "窗口")
+        menu.addItem(NSMenuItem(title: "最小化", action: #selector(NSWindow.miniaturize(_:)), keyEquivalent: "m"))
+        menu.addItem(NSMenuItem(title: "关闭", action: #selector(NSWindow.close), keyEquivalent: "w"))
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: NSLocalizedString("Bring All to Front", comment: "Bring all to front menu item"), action: #selector(NSApp.arrangeInFront(_:)), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "前置全部窗口", action: #selector(NSApp.arrangeInFront(_:)), keyEquivalent: ""))
         return menu
     }
     
@@ -166,13 +166,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         let menu = NSMenu()
         
-        let toggleItem = NSMenuItem(title: NSLocalizedString("Show/Hide Input", comment: "Toggle input menu item"), action: #selector(toggleInput), keyEquivalent: "")
+        let toggleItem = NSMenuItem(title: "显示/隐藏输入框", action: #selector(toggleInput), keyEquivalent: "")
         toggleItem.target = self
         menu.addItem(toggleItem)
         menu.addItem(NSMenuItem.separator())
         
         // Agent 切换菜单
-        let agentMenu = NSMenu(title: NSLocalizedString("Switch Agent", comment: "Switch agent menu title"))
+        let agentMenu = NSMenu(title: "切换 Agent")
         for agent in viewModel.availableAgents {
             let item = NSMenuItem(title: agent.name, action: #selector(switchAgent(_:)), keyEquivalent: "")
             item.representedObject = agent.id
@@ -181,23 +181,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             agentMenu.addItem(item)
         }
         
-        let agentItem = NSMenuItem(title: NSLocalizedString("Switch Agent", comment: "Switch agent menu item"), action: nil, keyEquivalent: "")
+        let agentItem = NSMenuItem(title: "切换 Agent", action: nil, keyEquivalent: "")
         agentItem.submenu = agentMenu
         menu.addItem(agentItem)
         
         menu.addItem(NSMenuItem.separator())
         
-        let historyItem = NSMenuItem(title: NSLocalizedString("Open Chat History", comment: "Chat history menu item"), action: #selector(openChatHistory), keyEquivalent: "h")
+        let historyItem = NSMenuItem(title: "打开聊天历史", action: #selector(openChatHistory), keyEquivalent: "h")
         historyItem.target = self
         menu.addItem(historyItem)
         menu.addItem(NSMenuItem.separator())
         
-        let settingsItem = NSMenuItem(title: NSLocalizedString("Open Settings", comment: "Open settings menu item"), action: #selector(openSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(title: "打开设置", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
         menu.addItem(NSMenuItem.separator())
         
-        let quitItem = NSMenuItem(title: NSLocalizedString("Quit", comment: "Quit menu item"), action: #selector(quit), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "退出", action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
         
@@ -222,7 +222,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         viewModel.switchAgent(agent)
         
-        if let menu = statusItem?.menu?.item(withTitle: NSLocalizedString("Switch Agent", comment: "Switch agent menu title"))?.submenu {
+        if let menu = statusItem?.menu?.item(withTitle: "切换 Agent")?.submenu {
             for item in menu.items {
                 item.state = (item.representedObject as? String) == agentId ? .on : .off
             }

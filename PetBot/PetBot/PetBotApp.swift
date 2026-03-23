@@ -222,7 +222,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         viewModel.switchAgent(agent)
         
-        if let menu = statusItem?.menu?.item(withTitle: "切换 Agent")?.submenu {
+        if let menu = statusItem?.menu?.item(withTitle: NSLocalizedString("Switch Agent", comment: "Switch agent menu title"))?.submenu {
             for item in menu.items {
                 item.state = (item.representedObject as? String) == agentId ? .on : .off
             }

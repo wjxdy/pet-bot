@@ -37,7 +37,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 设置应用为常规模式（显示在Dock中）
         NSApp.setActivationPolicy(.regular)
         
-        setupMainMenu()
+        // 延迟设置菜单，确保 SwiftUI 初始化完成后再覆盖
+        DispatchQueue.main.async { [weak self] in
+            self?.setupMainMenu()
+        }
+        
         setupPetWindow()
         setupStatusBar()
         setupHotkey()
@@ -52,6 +56,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Main Menu
     private func setupMainMenu() {
+        // 清除现有菜单
+        NSApp.mainMenu?.removeAllItems()
+        
         let mainMenu = NSMenu()
         
         // PetBot 菜单
@@ -70,6 +77,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         mainMenu.addItem(windowMenuItem)
         
         NSApp.mainMenu = mainMenu
+        print("[Debug] 主菜单已设置")
     }
     
     private func createAppMenu() -> NSMenu {

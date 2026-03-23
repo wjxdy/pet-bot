@@ -83,6 +83,36 @@ class SettingsWindowController: NSWindowController {
         
         y -= 45
         
+        // 聊天记录设置
+        let chatHistoryLabel = NSTextField(labelWithString: "聊天记录设置")
+        chatHistoryLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
+        chatHistoryLabel.textColor = .secondaryLabelColor
+        chatHistoryLabel.sizeToFit()
+        chatHistoryLabel.frame.origin = CGPoint(x: 20, y: y)
+        documentView.addSubview(chatHistoryLabel)
+        
+        y -= 35
+        
+        // 保存时长
+        let retentionLabel = NSTextField(labelWithString: "保存时长:")
+        retentionLabel.sizeToFit()
+        retentionLabel.frame.origin = CGPoint(x: 40, y: y)
+        documentView.addSubview(retentionLabel)
+        
+        let retentionPopUp = NSPopUpButton(frame: NSRect(x: 120, y: y, width: 150, height: 25))
+        retentionPopUp.tag = 1013
+        retentionPopUp.addItems(withTitles: ["1小时", "6小时", "12小时", "24小时", "3天", "7天", "永久"])
+        let currentHours = AppConfiguration.chatHistoryRetentionHours
+        let retentionOptions = [1, 6, 12, 24, 72, 168, -1]
+        if let index = retentionOptions.firstIndex(of: currentHours) {
+            retentionPopUp.selectItem(at: index)
+        } else {
+            retentionPopUp.selectItem(at: 3) // 默认24小时
+        }
+        documentView.addSubview(retentionPopUp)
+        
+        y -= 45
+        
         // Pet 初始位置
         let petLabel = NSTextField(labelWithString: "Pet 初始位置")
         petLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
@@ -353,6 +383,9 @@ class SettingsWindowController: NSWindowController {
                 case 1001: // 自动消失时间
                     let times: [Double] = [5, 10, 15, 30, -1]
                     UserDefaults.standard.set(times[popUp.indexOfSelectedItem], forKey: "bubbleAutoHideSeconds")
+                case 1013: // 聊天记录保存时长
+                    let hours = [1, 6, 12, 24, 72, 168, -1]
+                    AppConfiguration.chatHistoryRetentionHours = hours[popUp.indexOfSelectedItem]
                 default: break
                 }
             } else if let textField = view as? NSTextField {

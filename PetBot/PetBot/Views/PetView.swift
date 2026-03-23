@@ -51,34 +51,47 @@ struct PetView: View {
     }
     
     private func handleMessage(_ message: String) {
+        // 先添加用户消息到历史记录（保证顺序正确）
+        let userChatMessage = ChatMessage(content: message, isUser: true, agentName: nil, timestamp: Date())
+        ChatHistoryWindowController.shared?.addMessage(userChatMessage, for: viewModel.currentAgent.id)
+        ChatHistoryManager.currentWindow?.appendMessage(message, isUser: true, forAgentId: viewModel.currentAgent.id)
+        ChatHistoryStorage.shared.addMessage(userChatMessage, for: viewModel.currentAgent.id)
+        
+        // 开始流式输出
+        BubbleWindowController.shared.startStreaming(anchorWindow: petWindow)
+        
         Task {
-            await viewModel.sendMessage(message)
-            
-            await MainActor.run {
-                // 获取最后一个非用户消息
-                if let lastMessage = viewModel.messages.last(where: { !$0.isUser }) {
-                    lastResponse = lastMessage.content
-                    showBubble(text: lastResponse)
-                    
-                    // 添加到聊天历史
-                    let chatMessage = ChatMessage(content: lastMessage.content, isUser: false, agentName: viewModel.currentAgent.name, timestamp: Date())
-                    ChatHistoryWindowController.shared?.addMessage(chatMessage, for: viewModel.currentAgent.id)
-                    
-                    AppLogger.success("显示气泡: \(lastResponse.prefix(50))...")
-                } else if let error = viewModel.errorMessage {
-                    lastResponse = "❌ \(error)"
-                    showBubble(text: lastResponse)
-                    
-                    // 添加错误消息到聊天历史
-                    let errorMessage = ChatMessage(content: lastResponse, isUser: false, agentName: viewModel.currentAgent.name, timestamp: Date())
-                    ChatHistoryWindowController.shared?.addMessage(errorMessage, for: viewModel.currentAgent.id)
-                    
-                    AppLogger.error("显示错误: \(error)")
+            do {
+                // 使用流式 API
+                try await viewModel.sendMessageStreaming(message) { chunk in
+                    await MainActor.run {
+                        BubbleWindowController.shared.appendStreamingText(chunk)
+                    }
                 }
                 
-                // 添加用户消息到聊天历史
-                let userChatMessage = ChatMessage(content: message, isUser: true, agentName: nil, timestamp: Date())
-                ChatHistoryWindowController.shared?.addMessage(userChatMessage, for: viewModel.currentAgent.id)
+                await MainActor.run {
+                    BubbleWindowController.shared.endStreaming()
+                    
+                    // 保存到历史记录
+                    if let lastMessage = viewModel.messages.last(where: { !$0.isUser }) {
+                        let chatMessage = ChatMessage(content: lastMessage.content, isUser: false, agentName: viewModel.currentAgent.name, timestamp: Date())
+                        ChatHistoryWindowController.shared?.addMessage(chatMessage, for: viewModel.currentAgent.id)
+                        ChatHistoryManager.currentWindow?.appendMessage(lastMessage.content, isUser: false, forAgentId: viewModel.currentAgent.id)
+                        ChatHistoryStorage.shared.addMessage(chatMessage, for: viewModel.currentAgent.id)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    BubbleWindowController.shared.endStreaming()
+                    
+                    let errorText = "❌ \(error.localizedDescription)"
+                    BubbleWindowController.shared.show(text: errorText, anchorWindow: petWindow)
+                    
+                    let errorMessage = ChatMessage(content: errorText, isUser: false, agentName: viewModel.currentAgent.name, timestamp: Date())
+                    ChatHistoryWindowController.shared?.addMessage(errorMessage, for: viewModel.currentAgent.id)
+                    ChatHistoryManager.currentWindow?.appendMessage(errorText, isUser: false, forAgentId: viewModel.currentAgent.id)
+                    ChatHistoryStorage.shared.addMessage(errorMessage, for: viewModel.currentAgent.id)
+                }
             }
         }
     }

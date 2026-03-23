@@ -46,11 +46,13 @@ extension Agent {
                 // 排除隐藏目录和非目录项
                 guard !agentId.hasPrefix(".") else { continue }
                 
-                // 只读取有 config.yaml 的 agent
+                // 尝试读取 config.yaml，如果没有则使用默认信息
                 if let agent = loadAgentConfig(from: item, agentId: agentId) {
                     agents.append(agent)
+                } else {
+                    // 没有 config.yaml 的 agent 也显示，使用默认信息
+                    agents.append(createDefaultAgent(id: agentId))
                 }
-                // 没有 config.yaml 的跳过
             }
         }
         

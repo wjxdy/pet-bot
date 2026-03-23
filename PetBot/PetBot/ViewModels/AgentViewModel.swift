@@ -18,6 +18,9 @@ class AgentViewModel: ObservableObject {
     // MARK: - Dependencies
     private let apiService: OpenClawAPIService
     
+    // 防止并发调用
+    private var isProcessing = false
+    
     // MARK: - Initialization
     init(apiService: OpenClawAPIService = .shared) {
         self.apiService = apiService
@@ -68,6 +71,44 @@ class AgentViewModel: ObservableObject {
         }
         
         await setLoading(false)
+    }
+    
+    /// 流式发送消息
+    func sendMessageStreaming(_ content: String, onChunk: @escaping (String) async -> Void) async throws {
+        // 防止并发调用
+        guard !isProcessing else {
+            throw APIError.cliError("正在处理上一条消息，请稍候")
+        }
+        
+        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        
+        isProcessing = true
+        defer { isProcessing = false }
+        
+        // 添加用户消息
+        let userMessage = ChatMessage(content: trimmed, isUser: true, agentName: currentAgent.name, timestamp: Date())
+        await addMessage(userMessage)
+        await setLoading(true)
+        
+        defer {
+            Task {
+                await setLoading(false)
+            }
+        }
+        
+        // 流式接收响应
+        var fullResponse = ""
+        
+        try await apiService.sendMessageStreaming(trimmed, agentId: currentAgent.id) { chunk in
+            fullResponse += chunk
+            await onChunk(chunk)
+        }
+        
+        // 保存完整响应
+        let botMessage = ChatMessage(content: fullResponse, isUser: false, agentName: currentAgent.name, timestamp: Date())
+        await addMessage(botMessage)
+        AppLogger.success("流式响应完成，长度: \(fullResponse.count)")
     }
     
     func clearMessages() {

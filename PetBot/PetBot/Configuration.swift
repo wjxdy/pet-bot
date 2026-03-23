@@ -125,6 +125,18 @@ enum AppConfiguration {
         set { UserDefaults.standard.set(newValue, forKey: "inputInitialY") }
     }
     
+    /// 聊天记录保存时长（小时），-1 表示永久保存，默认24小时
+    static var chatHistoryRetentionHours: Int {
+        get {
+            // 检查是否有值，如果没有则返回默认值24
+            if UserDefaults.standard.object(forKey: "chatHistoryRetentionHours") == nil {
+                return 24
+            }
+            return UserDefaults.standard.integer(forKey: "chatHistoryRetentionHours")
+        }
+        set { UserDefaults.standard.set(newValue, forKey: "chatHistoryRetentionHours") }
+    }
+    
     static func registerDefaults() {
         let defaults: [String: Any] = [
             "bubbleAutoHideSeconds": 10.0,
@@ -137,7 +149,8 @@ enum AppConfiguration {
             "petImagePath": "/Users/xulei/Desktop/new_a.png",
             "petMaxHeight": 160.0,
             "inputInitialX": -1.0,
-            "inputInitialY": -1.0
+            "inputInitialY": -1.0,
+            "chatHistoryRetentionHours": 24
         ]
         UserDefaults.standard.register(defaults: defaults)
     }

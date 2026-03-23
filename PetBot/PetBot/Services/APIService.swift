@@ -5,6 +5,7 @@ import Foundation
 
 protocol APIServiceProtocol {
     func sendMessage(_ message: String, agentId: String) async throws -> String
+    func sendMessageStreaming(_ message: String, agentId: String, onChunk: @escaping (String) async -> Void) async throws
 }
 
 enum APIError: Error, LocalizedError {
@@ -38,6 +39,44 @@ actor OpenClawAPIService: APIServiceProtocol {
     
     func sendMessage(_ message: String, agentId: String) async throws -> String {
         return try await callOpenClawAgent(message: message, agentId: agentId)
+    }
+    
+    /// 流式发送消息（模拟打字机效果）
+    func sendMessageStreaming(_ message: String, agentId: String, onChunk: @escaping (String) async -> Void) async throws {
+        // 确保每次调用都是独立的
+        let fullResponse = try await callOpenClawAgent(message: message, agentId: agentId)
+        
+        // 检查响应是否为空或异常
+        if fullResponse.isEmpty || fullResponse == "(无回复)" {
+            await onChunk("抱歉，没有收到有效回复。")
+            return
+        }
+        
+        // 模拟打字机效果 - 按字符或单词流式输出
+        let words = fullResponse.components(separatedBy: .whitespacesAndNewlines)
+        var outputBuffer = ""
+        
+        for (index, word) in words.enumerated() {
+            outputBuffer += word
+            if index < words.count - 1 {
+                outputBuffer += " "
+            }
+            
+            // 每 1-3 个字符发送一次
+            if outputBuffer.count >= 2 || index == words.count - 1 {
+                await onChunk(outputBuffer)
+                outputBuffer = ""
+                
+                // 控制打字速度
+                let delay = UInt64.random(in: 10_000_000...30_000_000) // 10-30ms
+                try? await Task.sleep(nanoseconds: delay)
+            }
+        }
+        
+        // 发送剩余内容
+        if !outputBuffer.isEmpty {
+            await onChunk(outputBuffer)
+        }
     }
     
     private func callOpenClawAgent(message: String, agentId: String) async throws -> String {

@@ -41,10 +41,6 @@
 "Chat History" = "聊天历史";
 "Settings" = "设置";
 
-// Panel Titles
-"Companion List" = "同伴列表";
-"Conversation Records" = "对话记录";
-
 // Buttons
 "Done" = "完成";
 "Send" = "发送";

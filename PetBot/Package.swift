@@ -25,10 +25,6 @@ let package = Package(
             dependencies: [],
             path: "PetBot",
             exclude: ["Assets.xcassets", "Info.plist", "a-export.png"],
-            resources: [
-                .process("zh.lproj"),
-                .process("en.lproj")
-            ],
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency")
             ]
